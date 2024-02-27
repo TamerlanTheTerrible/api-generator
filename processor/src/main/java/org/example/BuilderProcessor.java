@@ -32,7 +32,6 @@ public class BuilderProcessor extends AbstractProcessor {
 
     private void generateBuilderFile(Element element) {
         createClass(element);
-        createFile(element);
     }
 
     private void createFile(Element element) {
