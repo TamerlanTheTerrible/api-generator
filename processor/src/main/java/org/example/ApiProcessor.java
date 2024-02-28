@@ -5,6 +5,8 @@ import com.google.auto.service.AutoService;
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.*;
+import javax.tools.FileObject;
+import javax.tools.StandardLocation;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Arrays;
@@ -23,10 +25,43 @@ public class ApiProcessor extends AbstractProcessor {
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         annotations.forEach(annotation -> roundEnv.getElementsAnnotatedWith(annotation)
-                        .forEach(this::generateApi)
+                        .forEach(element -> {
+                            generateApi(element);
+                            createFile(element);
+                        })
         );
 
         return true;
+    }
+
+    private void createFile(Element element) {
+        try {
+            // Get the Filer from the ProcessingEnvironment
+            Filer filer = processingEnv.getFiler();
+
+            // Create a new resource file (here, we'll create a properties file)
+            FileObject resourceFile = filer.createResource(
+                    StandardLocation.CLASS_OUTPUT,
+                    element.getEnclosingElement().toString(), // No package for this example
+                    "myproto.proto", // Name of the resource file
+                    element // Associated elements
+            );
+
+            // Write content to the resource file
+            try (PrintWriter writer = new PrintWriter(resourceFile.openWriter())) {
+                writer.print("""
+                        syntax = "proto3";
+                        package com.proto;
+                        option java_multiple_files = true;
+
+                        message FromApiProcessor {
+                          string hello =3;
+                        }
+                        """);
+            }
+        } catch (IOException e) {
+            e.printStackTrace(); // Handle or log the exception as needed
+        }
     }
 
     private void generateApi(Element element) {
@@ -77,8 +112,6 @@ public class ApiProcessor extends AbstractProcessor {
             throw new RuntimeException(e);
         }
     }
-
-
 
     private String generateParams(List<? extends VariableElement> list) {
         StringBuilder sb = new StringBuilder();
