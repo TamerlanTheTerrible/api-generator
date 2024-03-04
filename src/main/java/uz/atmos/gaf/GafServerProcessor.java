@@ -19,8 +19,8 @@ import java.util.Set;
 
 @AutoService(Processor.class)
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
-@SupportedAnnotationTypes("org.example.Api")
-public class ApiProcessor extends AbstractProcessor {
+@SupportedAnnotationTypes("uz.atmos.gaf.GafServer")
+public class GafServerProcessor extends AbstractProcessor {
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
@@ -76,11 +76,9 @@ public class ApiProcessor extends AbstractProcessor {
                     package %s;
                     
                     import org.springframework.web.bind.annotation.*;
-                    import lombok.*;
                     
                     @RestController
                     @RequestMapping("/%s")
-                    @RequiredArgsConstructor
                     public class %s{
                     """.formatted(packageName, className.toLowerCase(), apiName));
 
