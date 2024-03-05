@@ -1,12 +1,10 @@
-package uz.atmos.gaf;
+package uz.atmos.gaf.server.impl;
 
-import com.google.auto.service.AutoService;
+import uz.atmos.gaf.server.ApiGenerator;
 
-import javax.annotation.processing.*;
-import javax.lang.model.SourceVersion;
+import javax.annotation.processing.ProcessingEnvironment;
+import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.*;
-import javax.tools.FileObject;
-import javax.tools.StandardLocation;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Arrays;
@@ -14,57 +12,19 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Created by Temurbek Ismoilov on 27/02/24.
+ * Created by Temurbek Ismoilov on 05/03/24.
  */
 
-@AutoService(Processor.class)
-@SupportedSourceVersion(SourceVersion.RELEASE_17)
-@SupportedAnnotationTypes("uz.atmos.gaf.GafServer")
-public class GafServerProcessor extends AbstractProcessor {
+public class RestApiGenerator implements ApiGenerator {
 
     @Override
-    public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+    public void generate(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv, ProcessingEnvironment processingEnv) {
         annotations.forEach(annotation -> roundEnv.getElementsAnnotatedWith(annotation)
-                        .forEach(element -> {
-                            generateApi(element);
-                            createFile(element);
-                        })
+                .forEach(element -> generate(element, processingEnv))
         );
-
-        return true;
     }
 
-    private void createFile(Element element) {
-        try {
-            // Get the Filer from the ProcessingEnvironment
-            Filer filer = processingEnv.getFiler();
-
-            // Create a new resource file (here, we'll create a properties file)
-            FileObject resourceFile = filer.createResource(
-                    StandardLocation.CLASS_OUTPUT,
-                    element.getEnclosingElement().toString(), // No package for this example
-                    "myproto.proto", // Name of the resource file
-                    element // Associated elements
-            );
-
-            // Write content to the resource file
-            try (PrintWriter writer = new PrintWriter(resourceFile.openWriter())) {
-                writer.print("""
-                        syntax = "proto3";
-                        package com.proto;
-                        option java_multiple_files = true;
-
-                        message FromApiProcessor {
-                          string hello =3;
-                        }
-                        """);
-            }
-        } catch (IOException e) {
-            e.printStackTrace(); // Handle or log the exception as needed
-        }
-    }
-
-    private void generateApi(Element element) {
+    private void generate(Element element, ProcessingEnvironment processingEnv) {
         String className = element.getSimpleName().toString();
         String packageName = element.getEnclosingElement().toString();
         String apiName = className + "Controller";
@@ -98,7 +58,7 @@ public class GafServerProcessor extends AbstractProcessor {
                            return null;
                        }
                    """.formatted(
-                           methodElement.getSimpleName(),
+                        methodElement.getSimpleName(),
                         method.getReturnType().toString(),
                         methodElement.getSimpleName(),
                         generateParams(method.getParameters())));
