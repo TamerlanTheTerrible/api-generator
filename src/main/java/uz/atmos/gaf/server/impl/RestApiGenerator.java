@@ -9,22 +9,16 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Created by Temurbek Ismoilov on 05/03/24.
  */
 
 public class RestApiGenerator implements ApiGenerator {
-
     @Override
-    public void generate(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv, ProcessingEnvironment processingEnv) {
-        annotations.forEach(annotation -> roundEnv.getElementsAnnotatedWith(annotation)
-                .forEach(element -> generate(element, processingEnv))
-        );
-    }
+    public void generate(Element element, ProcessingEnvironment processingEnv) {
+        System.out.println("Invoking " + this.getClass().getSimpleName() + " for " + element);
 
-    private void generate(Element element, ProcessingEnvironment processingEnv) {
         String className = element.getSimpleName().toString();
         String packageName = element.getEnclosingElement().toString();
         String apiName = className + "Controller";
@@ -44,7 +38,6 @@ public class RestApiGenerator implements ApiGenerator {
 
             // fields
             final List<? extends Element> enclosedElements = element.getEnclosedElements();
-            System.out.println("ELEMENTS: " + Arrays.toString(enclosedElements.toArray()));
             // handle methods
             final List<? extends Element> methods = enclosedElements.stream()
                     .filter(e -> ElementKind.METHOD.equals(e.getKind()))

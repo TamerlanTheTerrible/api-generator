@@ -4,6 +4,7 @@ import uz.atmos.gaf.server.ApiGenerator;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
+import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import java.util.Set;
 
@@ -12,8 +13,9 @@ import java.util.Set;
  */
 
 public class ThriftApiGenerator implements ApiGenerator {
+
     @Override
-    public void generate(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv, ProcessingEnvironment processingEnv) {
+    public void generate(Element element, ProcessingEnvironment processingEnv) {
 
     }
 }

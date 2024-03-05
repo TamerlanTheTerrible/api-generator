@@ -1,6 +1,7 @@
 package uz.atmos.gaf.server;
 
 import uz.atmos.gaf.ApiType;
+import uz.atmos.gaf.server.impl.GrpcApiGenerator;
 import uz.atmos.gaf.server.impl.RestApiGenerator;
 import uz.atmos.gaf.server.impl.ThriftApiGenerator;
 
@@ -15,7 +16,7 @@ public final class ApiGeneratorContainer {
     public static final Map<ApiType, ApiGenerator> container = new EnumMap<>(ApiType.class);
 
     static {
-        container.put(ApiType.GRPC, new RestApiGenerator());
+        container.put(ApiType.GRPC, new GrpcApiGenerator());
         container.put(ApiType.REST, new RestApiGenerator());
         container.put(ApiType.THRIFT, new ThriftApiGenerator());
     }
