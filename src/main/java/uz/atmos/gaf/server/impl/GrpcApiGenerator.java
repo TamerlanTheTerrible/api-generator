@@ -18,14 +18,9 @@ import java.util.Set;
  */
 
 public class GrpcApiGenerator implements ApiGenerator {
-    @Override
-    public void generate(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv, ProcessingEnvironment processingEnv) {
-        annotations.forEach(annotation -> roundEnv.getElementsAnnotatedWith(annotation)
-                .forEach(element -> generate(element, processingEnv))
-        );
-    }
 
-    private void generate(Element element, ProcessingEnvironment processingEnv) {
+    @Override
+    public void generate(Element element, ProcessingEnvironment processingEnv) {
         try {
             // Get the Filer from the ProcessingEnvironment
             Filer filer = processingEnv.getFiler();

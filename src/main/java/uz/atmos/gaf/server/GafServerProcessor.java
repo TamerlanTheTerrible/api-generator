@@ -38,8 +38,8 @@ public class GafServerProcessor extends AbstractProcessor {
 
                 for (ApiType type : typeSet) {
                     // Process each type
-                    processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, "Found type: " + type);
-                    ApiGeneratorContainer.get(type).generate(annotations, roundEnv, processingEnv);
+                    System.out.println("Found type: " + type);
+                    ApiGeneratorContainer.get(type).generate(element, processingEnv);
                 }
             }
         }
