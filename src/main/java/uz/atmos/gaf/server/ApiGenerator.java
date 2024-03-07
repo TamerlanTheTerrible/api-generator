@@ -1,5 +1,8 @@
 package uz.atmos.gaf.server;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.google.protobuf.InvalidProtocolBufferException;
+
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
@@ -11,5 +14,5 @@ import java.util.Set;
  */
 
 public interface ApiGenerator {
-    void generate(Element element, ProcessingEnvironment processingEnv);
+    void generate(Element element, ProcessingEnvironment processingEnv) throws JsonProcessingException, InvalidProtocolBufferException;
 }

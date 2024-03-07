@@ -1,6 +1,8 @@
 package uz.atmos.gaf.server;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.auto.service.AutoService;
+import com.google.protobuf.InvalidProtocolBufferException;
 import uz.atmos.gaf.ApiType;
 
 import javax.annotation.processing.*;
@@ -39,7 +41,13 @@ public class GafServerProcessor extends AbstractProcessor {
                 for (ApiType type : typeSet) {
                     // Process each type
                     System.out.println("Found type: " + type);
-                    ApiGeneratorContainer.get(type).generate(element, processingEnv);
+                    try {
+                        ApiGeneratorContainer.get(type).generate(element, processingEnv);
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                    } catch (InvalidProtocolBufferException e) {
+                        throw new RuntimeException(e);
+                    }
                 }
             }
         }
