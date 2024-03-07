@@ -1,23 +1,15 @@
 package uz.atmos.gaf.server.impl;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.Message;
-import com.google.protobuf.Struct;
-import com.google.protobuf.util.JsonFormat;
 import uz.atmos.gaf.server.ApiGenerator;
-import uz.atmos.gaf.server.ApiGeneratorContainer;
 
 import javax.annotation.processing.ProcessingEnvironment;
-import javax.annotation.processing.RoundEnvironment;
-import javax.lang.model.element.*;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.VariableElement;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Created by Temurbek Ismoilov on 05/03/24.
@@ -25,7 +17,7 @@ import java.util.Map;
 
 public class RestApiGenerator implements ApiGenerator {
     @Override
-    public void generate(Element element, ProcessingEnvironment processingEnv) throws JsonProcessingException, InvalidProtocolBufferException {
+    public void generate(Element element, ProcessingEnvironment processingEnv) {
         System.out.println("Invoking " + this.getClass().getSimpleName() + " for " + element);
 
         String serviceClassName = element.getSimpleName().toString();
