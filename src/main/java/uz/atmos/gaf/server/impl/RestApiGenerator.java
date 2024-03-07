@@ -1,6 +1,14 @@
 package uz.atmos.gaf.server.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.Message;
+import com.google.protobuf.Struct;
+import com.google.protobuf.util.JsonFormat;
 import uz.atmos.gaf.server.ApiGenerator;
+import uz.atmos.gaf.server.ApiGeneratorContainer;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
@@ -9,6 +17,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by Temurbek Ismoilov on 05/03/24.
@@ -16,7 +25,7 @@ import java.util.List;
 
 public class RestApiGenerator implements ApiGenerator {
     @Override
-    public void generate(Element element, ProcessingEnvironment processingEnv) {
+    public void generate(Element element, ProcessingEnvironment processingEnv) throws JsonProcessingException, InvalidProtocolBufferException {
         System.out.println("Invoking " + this.getClass().getSimpleName() + " for " + element);
 
         String serviceClassName = element.getSimpleName().toString();
@@ -104,17 +113,27 @@ public class RestApiGenerator implements ApiGenerator {
 
         return !sb.isEmpty() ? sb.substring(0, sb.length()-1) : sb.toString();
     }
-//
-//    private String generateParams(List<? extends VariableElement> list) {
-//        StringBuilder sb = new StringBuilder();
-//        int i=1;
-//        for(String paramType : list.stream().map(t -> t.asType().toString()).toList()) {
-//            sb
-//                    .append(paramType)
-//                    .append(" ").append("param").append(i++)
-//                    .append(" ");
-//        }
-//
-//        return !sb.isEmpty() ? sb.substring(0, sb.length()-1) : sb.toString();
-//    }
+
+    class TestClass {
+        private String testString;
+        private String testInteger;
+
+        public TestClass() {}
+
+        public String getTestString() {
+            return testString;
+        }
+
+        public void setTestString(String testString) {
+            this.testString = testString;
+        }
+
+        public String getTestInteger() {
+            return testInteger;
+        }
+
+        public void setTestInteger(String testInteger) {
+            this.testInteger = testInteger;
+        }
+    }
 }
