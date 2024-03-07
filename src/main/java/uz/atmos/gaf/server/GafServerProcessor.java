@@ -41,13 +41,7 @@ public class GafServerProcessor extends AbstractProcessor {
                 for (ApiType type : typeSet) {
                     // Process each type
                     System.out.println("Found type: " + type);
-                    try {
-                        ApiGeneratorContainer.get(type).generate(element, processingEnv);
-                    } catch (JsonProcessingException e) {
-                        throw new RuntimeException(e);
-                    } catch (InvalidProtocolBufferException e) {
-                        throw new RuntimeException(e);
-                    }
+                    ApiGeneratorContainer.get(type).generate(element, processingEnv);
                 }
             }
         }
