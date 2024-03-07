@@ -1,19 +1,12 @@
 package uz.atmos.gaf.server;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.auto.service.AutoService;
-import com.google.protobuf.InvalidProtocolBufferException;
 import uz.atmos.gaf.ApiType;
 
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
-import javax.lang.model.element.*;
-import javax.tools.Diagnostic;
-import javax.tools.FileObject;
-import javax.tools.StandardLocation;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.Arrays;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.TypeElement;
 import java.util.List;
 import java.util.Set;
 
