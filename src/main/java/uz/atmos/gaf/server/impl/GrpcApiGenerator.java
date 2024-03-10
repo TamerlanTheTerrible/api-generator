@@ -120,33 +120,15 @@ public class GrpcApiGenerator implements ApiGenerator {
                     System.out.println("Message field type: " + fieldType + ", name: " + fieldName + ", kind: " + fieldKind);
                     // Process class type
                     if(fieldKind == TypeKind.DECLARED) {
-                        final DeclaredType declaredType = (DeclaredType) field.asType();
-                        // Process List type
-                        if(fieldType.contains("List")) {
-                            //Get simple class name
-                            List<? extends TypeMirror> genericParamTypes = declaredType.getTypeArguments();
-                            DeclaredType declaredType1 = genericParamTypes.isEmpty() ? null
-                                    : ((DeclaredType) genericParamTypes.get(0));
-                            //Write field if the type has appropriate proto mapping,
-                            //else the type is a user declared class, so write the field and call the method generateMessage() recursively
-                            sb.append(" ").append("repeated");
-                            processReferenceType(declaredType1, sb, fieldName, i, nestedMessages);
-                        }
-                        // Process singular type
-                        else {
-                            processReferenceType(declaredType, sb, fieldName, i, nestedMessages);
-                        }
+                        processReferenceType(field, fieldType, sb, fieldName, i, nestedMessages);
                     }
                     // Process array type
                     else if (fieldKind == TypeKind.ARRAY) {
-                        final String protoName = getProtoName(fieldType.replace("[", "").replace("]", ""));
-                        sb.append(" ").append("repeated");
-                        appendFieldRecord(sb, protoName, fieldName, i);
+                        processArray(fieldType, sb, fieldName, i);
                     }
                     // Process primitive type
                     else {
-                        final String protoName = getProtoName(fieldType);
-                        appendFieldRecord(sb, protoName, fieldName, i);
+                        processPrimitive(fieldType, sb, fieldName, i);
                     }
                 }
             }
@@ -159,6 +141,36 @@ public class GrpcApiGenerator implements ApiGenerator {
         }
 
         return sb.toString();
+    }
+
+    private void processPrimitive(String fieldType, StringBuilder sb, String fieldName, int i) {
+        final String protoName = getProtoName(fieldType);
+        appendFieldRecord(sb, protoName, fieldName, i);
+    }
+
+    private void processArray(String fieldType, StringBuilder sb, String fieldName, int i) {
+        final String protoName = getProtoName(fieldType.replace("[", "").replace("]", ""));
+        sb.append(" ").append("repeated");
+        appendFieldRecord(sb, protoName, fieldName, i);
+    }
+
+    private void processReferenceType(Element field, String fieldType, StringBuilder sb, String fieldName, int i, List<String> nestedMessages) {
+        final DeclaredType declaredType = (DeclaredType) field.asType();
+        // Process List type
+        if(fieldType.contains("List")) {
+            //Get simple class name
+            List<? extends TypeMirror> genericParamTypes = declaredType.getTypeArguments();
+            DeclaredType declaredType1 = genericParamTypes.isEmpty() ? null
+                    : ((DeclaredType) genericParamTypes.get(0));
+            //Write field if the type has appropriate proto mapping,
+            //else the type is a user declared class, so write the field and call the method generateMessage() recursively
+            sb.append(" ").append("repeated");
+            processReferenceType(declaredType1, sb, fieldName, i, nestedMessages);
+        }
+        // Process singular type
+        else {
+            processReferenceType(declaredType, sb, fieldName, i, nestedMessages);
+        }
     }
 
     private void processReferenceType(DeclaredType declaredType, StringBuilder sb, String fieldName, int i, List<String> nestedClassList) {
