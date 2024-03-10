@@ -40,6 +40,7 @@ public class GrpcApiGenerator implements ApiGenerator {
         map.put("Boolean", "bool");
         map.put("boolean", "bool");
         map.put("ByteString", "bytes");
+        map.put("Object", "Any");
     }
 
     @Override
@@ -65,6 +66,8 @@ public class GrpcApiGenerator implements ApiGenerator {
                         syntax = "proto3";
                         package com.proto;
                         option java_multiple_files = true;
+                        
+                        import "google/protobuf/any.proto";
 
                         """);
 
@@ -93,7 +96,7 @@ public class GrpcApiGenerator implements ApiGenerator {
 
     private String generateMessage(TypeMirror typeMirror) {
         StringBuilder sb = new StringBuilder();
-        List<String> nestedClasses = new ArrayList<>();
+        List<String> nestedMessages = new ArrayList<>();
         // Process return type (if it's a class)
         if (typeMirror.getKind() == TypeKind.DECLARED) {
             // Get the return type's element
@@ -105,7 +108,6 @@ public class GrpcApiGenerator implements ApiGenerator {
                         .stream()
                         .filter(e -> e.getKind() == ElementKind.FIELD)
                         .toList();
-
                 System.out.println("Message name: " + returnTypeElement.getSimpleName());
                 // write message name
                 sb.append("message ").append(returnTypeElement.getSimpleName()).append(" {\n");
@@ -118,12 +120,27 @@ public class GrpcApiGenerator implements ApiGenerator {
                     System.out.println("Message field type: " + fieldType + ", name: " + fieldName + ", kind: " + fieldKind);
                     // Process class type
                     if(fieldKind == TypeKind.DECLARED) {
-                        //TODO
+                        final DeclaredType declaredType = (DeclaredType) field.asType();
+                        // Process List type
+                        if(fieldType.contains("List")) {
+                            //Get simple class name
+                            List<? extends TypeMirror> genericParamTypes = declaredType.getTypeArguments();
+                            DeclaredType declaredType1 = genericParamTypes.isEmpty() ? null
+                                    : ((DeclaredType) genericParamTypes.get(0));
+                            //Write field if the type has appropriate proto mapping,
+                            //else the type is a user declared class, so write the field and call the method generateMessage() recursively
+                            sb.append(" ").append("repeated");
+                            processReferenceType(declaredType1, sb, fieldName, i, nestedMessages);
+                        }
+                        // Process singular type
+                        else {
+                            processReferenceType(declaredType, sb, fieldName, i, nestedMessages);
+                        }
                     }
                     // Process array type
                     else if (fieldKind == TypeKind.ARRAY) {
                         final String protoName = getProtoName(fieldType.replace("[", "").replace("]", ""));
-                        sb.append("  ").append("repeated");
+                        sb.append(" ").append("repeated");
                         appendFieldRecord(sb, protoName, fieldName, i);
                     }
                     // Process primitive type
@@ -134,11 +151,26 @@ public class GrpcApiGenerator implements ApiGenerator {
                 }
             }
             sb.append("\n}");
+            nestedMessages.forEach(m ->
+                    sb.append("\n").append(m)
+            );
         } else {
             //TODO
         }
 
         return sb.toString();
+    }
+
+    private void processReferenceType(DeclaredType declaredType, StringBuilder sb, String fieldName, int i, List<String> nestedClassList) {
+        String simpleClassName = declaredType == null ? "Object"
+                : declaredType.asElement().getSimpleName().toString();
+        String protoName = map.get(simpleClassName);
+        if(protoName != null) {
+            appendFieldRecord(sb, protoName, fieldName, i);
+        } else {
+            appendFieldRecord(sb, simpleClassName, fieldName, i);
+            nestedClassList.add(generateMessage(declaredType));
+        }
     }
 
     private String getProtoName(String fieldType) {
@@ -150,6 +182,6 @@ public class GrpcApiGenerator implements ApiGenerator {
     }
 
     private static void appendFieldRecord(StringBuilder sb, String protoName, String fieldName, int i) {
-        sb.append("  ").append(protoName).append(" ").append(fieldName).append(" = ").append(i + 1).append(";").append("\n");
+        sb.append(" ").append(protoName).append(" ").append(fieldName).append(" = ").append(i + 1).append(";").append("\n");
     }
 }
