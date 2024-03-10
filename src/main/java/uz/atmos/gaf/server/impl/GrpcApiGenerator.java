@@ -1,5 +1,6 @@
 package uz.atmos.gaf.server.impl;
 
+import uz.atmos.gaf.exception.GafException;
 import uz.atmos.gaf.server.ApiGenerator;
 
 import javax.annotation.processing.Filer;
@@ -10,10 +11,11 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
-import javax.lang.model.type.WildcardType;
+import javax.swing.*;
 import javax.tools.FileObject;
 import javax.tools.StandardLocation;
 import java.io.PrintWriter;
+import java.lang.reflect.Field;
 import java.util.*;
 
 /**
@@ -52,7 +54,7 @@ public class GrpcApiGenerator implements ApiGenerator {
             FileObject resourceFile = filer.createResource(
                     StandardLocation.CLASS_OUTPUT,
                     element.getEnclosingElement().toString(), // No package for this example
-                    className + "proto.proto", // Name of the resource file
+                    className + ".proto", // Name of the resource file
                     element // Associated elements
             );
 
@@ -74,41 +76,80 @@ public class GrpcApiGenerator implements ApiGenerator {
                         .toList();
 
                 for(Element methodElement: methods) {
-                    ExecutableElement method = (ExecutableElement) methodElement;
-                    TypeMirror returnType = ((ExecutableElement) methodElement).getReturnType();
-                    System.out.println("<<<>>> Return Type: " + returnType);
-                    // Process return type (if it's a class)
-                    if (returnType.getKind() == TypeKind.DECLARED) {
-                        // Get the return type's element
-                        Element returnTypeElement = ((DeclaredType) returnType).asElement();
-
-                        // Process fields of the return type (if it's a class)
-                        if (returnTypeElement.getKind() == ElementKind.CLASS) {
-                            // Filter fields
-                            List<? extends Element> fields = returnTypeElement.getEnclosedElements()
-                                    .stream()
-                                    .filter(e -> e.getKind() == ElementKind.FIELD)
-                                    .toList();
-
-                            // Process each field
-                            for (Element field : fields) {
-                                String fieldTypeName = field.asType().toString();
-                                String fieldName = field.getSimpleName().toString();
-                                System.out.println("Field Type: " + fieldTypeName);
-                                System.out.println("Field Name: " + fieldName);
-
-                                // Further processing of the field...
-                                //TODO
-                            }
-                        } else {
-                           //TODO
-                        }
-                    }
+                    generateService((ExecutableElement) methodElement, writer);
                 }
             }
         } catch (Exception e) {
             System.out.println("ERROR: " + e.getMessage());
             e.printStackTrace(); // Handle or log the exception as needed
         }
+    }
+
+    private void generateService(ExecutableElement methodElement, PrintWriter writer) {
+        TypeMirror returnType = methodElement.getReturnType();
+        String returnTypeMessage = generateMessage(returnType);
+        writer.write(returnTypeMessage);
+    }
+
+    private String generateMessage(TypeMirror typeMirror) {
+        StringBuilder sb = new StringBuilder();
+        List<String> nestedClasses = new ArrayList<>();
+        // Process return type (if it's a class)
+        if (typeMirror.getKind() == TypeKind.DECLARED) {
+            // Get the return type's element
+            Element returnTypeElement = ((DeclaredType) typeMirror).asElement();
+            // Process fields of the return type (if it's a class)
+            if (returnTypeElement.getKind() == ElementKind.CLASS) {
+                // Filter fields
+                List<? extends Element> fields = returnTypeElement.getEnclosedElements()
+                        .stream()
+                        .filter(e -> e.getKind() == ElementKind.FIELD)
+                        .toList();
+
+                System.out.println("Message name: " + returnTypeElement.getSimpleName());
+                // write message name
+                sb.append("message ").append(returnTypeElement.getSimpleName()).append(" {\n");
+                // Process each field
+                for (int i=0; i<fields.size(); i++) {
+                    Element field = fields.get(i);
+                    String fieldType = field.asType().toString();
+                    String fieldName = field.getSimpleName().toString();
+                    TypeKind fieldKind = field.asType().getKind();
+                    System.out.println("Message field type: " + fieldType + ", name: " + fieldName + ", kind: " + fieldKind);
+                    // Process class type
+                    if(fieldKind == TypeKind.DECLARED) {
+                        //TODO
+                    }
+                    // Process array type
+                    else if (fieldKind == TypeKind.ARRAY) {
+                        final String protoName = getProtoName(fieldType.replace("[", "").replace("]", ""));
+                        sb.append("  ").append("repeated");
+                        appendFieldRecord(sb, protoName, fieldName, i);
+                    }
+                    // Process primitive type
+                    else {
+                        final String protoName = getProtoName(fieldType);
+                        appendFieldRecord(sb, protoName, fieldName, i);
+                    }
+                }
+            }
+            sb.append("\n}");
+        } else {
+            //TODO
+        }
+
+        return sb.toString();
+    }
+
+    private String getProtoName(String fieldType) {
+        String protoName = map.get(fieldType);
+        if (protoName == null) {
+            throw new GafException("Could not map java type: " + fieldType);
+        }
+        return protoName;
+    }
+
+    private static void appendFieldRecord(StringBuilder sb, String protoName, String fieldName, int i) {
+        sb.append("  ").append(protoName).append(" ").append(fieldName).append(" = ").append(i + 1).append(";").append("\n");
     }
 }
