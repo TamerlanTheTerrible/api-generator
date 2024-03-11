@@ -11,11 +11,9 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
-import javax.swing.*;
 import javax.tools.FileObject;
 import javax.tools.StandardLocation;
 import java.io.PrintWriter;
-import java.lang.reflect.Field;
 import java.util.*;
 import java.util.stream.Stream;
 
@@ -26,8 +24,10 @@ import java.util.stream.Stream;
 public class GrpcApiGenerator implements ApiGenerator {
 
     private final Map<String, String> map;
+    private final Set<String> convertedClassSet;
 
     public GrpcApiGenerator() {
+        this.convertedClassSet = new HashSet<>();
         this.map = new HashMap<>();
         map.put("String", "string");
         map.put("Integer", "int32");
@@ -61,7 +61,6 @@ public class GrpcApiGenerator implements ApiGenerator {
             );
 
             // Write content to the resource file
-            Set<Class<?>> convertedClassSet = new HashSet<>();
             try (PrintWriter writer = new PrintWriter(resourceFile.openWriter())) {
                 writer.print("""
                         syntax = "proto3";
@@ -123,6 +122,7 @@ public class GrpcApiGenerator implements ApiGenerator {
 
         // Process each field
         for (int i=0; i<fields.size(); i++) {
+            //Get variables for log
             Element field = fields.get(i);
             String fieldType = field.asType().toString();
             String fieldName = field.getSimpleName().toString();
@@ -174,7 +174,9 @@ public class GrpcApiGenerator implements ApiGenerator {
         } else {
             // else the type is declared class by user, so write the field and call the method generateMessage() recursively
             appendFieldRecord(sb, simpleClassName, fieldName, i);
-            if(declaredType != null) {
+            if(declaredType != null && !convertedClassSet.contains(fieldType)) {
+                //add to th set so that next time not to process it
+                convertedClassSet.add(fieldType);
                 nestedMessages.add(generateMessage(declaredType));
             }
         }
