@@ -7,6 +7,7 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeKind;
@@ -43,6 +44,8 @@ public class GrpcApiGenerator implements ApiGenerator {
         map.put("boolean", "bool");
         map.put("ByteString", "bytes");
         map.put("Object", "Any");
+        map.put("byte", "byte");
+        map.put("Byte", "byte");
     }
 
     @Override
@@ -84,16 +87,22 @@ public class GrpcApiGenerator implements ApiGenerator {
 
             List<String> messages = new ArrayList<>();
             for(Element methodElement: methods) {
+                //process return type
                 TypeMirror returnType = ((ExecutableElement) methodElement).getReturnType();
-                final String returnTypeName = getReturnTypeName(returnType, messages);
-
+                String returnTypeName = getReturnTypeName(returnType, messages);
+                messages.add(generateMessage(returnType));
+                //process params
+                List<? extends VariableElement> parameters = ((ExecutableElement) methodElement).getParameters();
+                String paramString = getParamString(parameters, messages);
+                parameters.forEach(ve -> generateMessage(ve, new StringBuilder()));
+                //write down methods
                 writer.print("""
-                          rpc %s() returns (%s){};
+                          rpc %s(%s) returns (%s){};
                         """.formatted(
                         methodElement.getSimpleName(),
+                        paramString,
                         returnTypeName
                 ));
-                messages.add(generateMessage(returnType));
             }
             writer.write("}\n");
             messages.forEach(writer::write);
@@ -103,6 +112,25 @@ public class GrpcApiGenerator implements ApiGenerator {
         }
 
     }
+
+    private String getParamString(List<? extends VariableElement> parameters, List<String> messages) {
+        if (parameters.isEmpty()) {
+            return "google.protobuf.Empty";
+        }
+        Element element = ((DeclaredType) parameters.get(0).asType()).asElement();
+        String className = element.getSimpleName().toString();
+        System.out.println("PARAM CLASSNAME: " + className);
+        if(map.containsKey(className)) {
+            final String protoName = map.get(className);
+            String wrapperName = createWrapperName(protoName);
+            addToTheMessageList(messages, wrapperName, protoName);
+            return wrapperName;
+        } else {
+            return className;
+        }
+    }
+
+
 
     private String getReturnTypeName(TypeMirror returnType, List<String> messages) {
         if(returnType.getKind().isPrimitive()) {
@@ -130,16 +158,16 @@ public class GrpcApiGenerator implements ApiGenerator {
     }
 
     private void addToTheMessageList(List<String> messages, String wrapperName, String protoName) {
-        String message = """
+        //add wrapped message to the proto file, if it is not added already
+        if (!convertedClassSet.contains(wrapperName)) {
+            convertedClassSet.add(wrapperName);
+
+            String message = """
                 
                 message %s {
                  %s %s = 1;
                 }
-                
                 """ .formatted(wrapperName, protoName, protoName);
-        //add wrapped message to the proto file, if it is not added already
-        if (!convertedClassSet.contains(wrapperName)) {
-            convertedClassSet.add(wrapperName);
             messages.add(message);
         }
     }

@@ -55,10 +55,8 @@ public class RestApiGenerator implements ApiGenerator {
                     )
             );
 
-            // fields
-            final List<? extends Element> enclosedElements = element.getEnclosedElements();
             // handle methods
-            final List<? extends Element> methods = enclosedElements.stream()
+            final List<? extends Element> methods = element.getEnclosedElements().stream()
                     .filter(e -> ElementKind.METHOD.equals(e.getKind()))
                     .toList();
 
