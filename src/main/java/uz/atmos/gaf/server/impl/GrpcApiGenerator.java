@@ -97,42 +97,11 @@ public class GrpcApiGenerator implements ApiGenerator {
 
     private String generateMessage(TypeMirror typeMirror) {
         StringBuilder sb = new StringBuilder();
-        List<String> nestedMessages = new ArrayList<>();
         // Process return type (if it's a class)
-        if (typeMirror.getKind() == TypeKind.DECLARED) {
+        if (typeMirror.getKind() == TypeKind.DECLARED && ((DeclaredType) typeMirror).asElement().getKind() == ElementKind.CLASS) {
             // Get the return type's element
             Element returnTypeElement = ((DeclaredType) typeMirror).asElement();
-            // Process fields of the return type (if it's a class)
-            if (returnTypeElement.getKind() == ElementKind.CLASS) {
-                // Filter fields
-                List<? extends Element> fields = returnTypeElement.getEnclosedElements()
-                        .stream()
-                        .filter(e -> e.getKind() == ElementKind.FIELD)
-                        .toList();
-                System.out.println("Message name: " + returnTypeElement.getSimpleName());
-                // write message name
-                sb.append("message ").append(returnTypeElement.getSimpleName()).append(" {\n");
-                // Process each field
-                for (int i=0; i<fields.size(); i++) {
-                    Element field = fields.get(i);
-                    String fieldType = field.asType().toString();
-                    String fieldName = field.getSimpleName().toString();
-                    TypeKind fieldKind = field.asType().getKind();
-                    System.out.println("Message field type: " + fieldType + ", name: " + fieldName + ", kind: " + fieldKind);
-                    // Process class type
-                    if(fieldKind == TypeKind.DECLARED) {
-                        processReferenceType(sb, field, fieldType, fieldName, i, nestedMessages);
-                    } else if (fieldKind == TypeKind.ARRAY) {
-                        processArray(sb, fieldType, fieldName, i);
-                    } else {
-                        processPrimitive(sb, fieldType, fieldName, i);
-                    }
-                }
-            }
-            sb.append("\n}");
-            nestedMessages.forEach(m ->
-                    sb.append("\n").append(m)
-            );
+            generateMessage(returnTypeElement, sb);
         } else {
             //TODO
         }
@@ -140,18 +109,55 @@ public class GrpcApiGenerator implements ApiGenerator {
         return sb.toString();
     }
 
-    private void processPrimitive(StringBuilder sb, String fieldType,String fieldName, int i) {
-        final String protoName = getProtoName(fieldType);
-        appendFieldRecord(sb, protoName, fieldName, i);
+    private void generateMessage(Element element, StringBuilder sb) {
+        List<String> nestedMessages = new ArrayList<>();
+        // Filter fields
+        List<? extends Element> fields = element.getEnclosedElements()
+                .stream()
+                .filter(e -> e.getKind() == ElementKind.FIELD)
+                .toList();
+        System.out.println("Message name: " + element.getSimpleName());
+
+        // write message name
+        sb.append("message ").append(element.getSimpleName()).append(" {\n");
+
+        // Process each field
+        for (int i=0; i<fields.size(); i++) {
+            Element field = fields.get(i);
+            String fieldType = field.asType().toString();
+            String fieldName = field.getSimpleName().toString();
+            TypeKind fieldKind = field.asType().getKind();
+            System.out.println("Message field type: " + fieldType + ", name: " + fieldName + ", kind: " + fieldKind);
+
+            // Process class type
+            if(fieldKind == TypeKind.DECLARED) {
+                processReferenceType(sb, field, i, nestedMessages);
+            } else if (fieldKind == TypeKind.ARRAY) {
+                processArray(sb, field, i);
+            } else {
+                processPrimitive(sb, field, i);
+            }
+        }
+        sb.append("\n}");
+        nestedMessages.forEach(m -> sb.append("\n").append(m));
     }
 
-    private void processArray(StringBuilder sb, String fieldType, String fieldName, int i) {
+    private void processPrimitive(StringBuilder sb, Element element, int i) {
+        final String protoName = getProtoName(element.asType().toString());
+        appendFieldRecord(sb, protoName, element.getSimpleName().toString(), i);
+    }
+
+    private void processArray(StringBuilder sb, Element element, int i) {
+        String fieldType = element.asType().toString();
+        String fieldName = element.getSimpleName().toString();
         final String protoName = getProtoName(fieldType.replace("[", "").replace("]", ""));
         sb.append(" ").append("repeated");
         appendFieldRecord(sb, protoName, fieldName, i);
     }
 
-    private void processReferenceType(StringBuilder sb, Element field, String fieldType,  String fieldName, int i, List<String> nestedMessages) {
+    private void processReferenceType(StringBuilder sb, Element field, int i, List<String> nestedMessages) {
+        String fieldType = field.asType().toString();
+        String fieldName = field.getSimpleName().toString();
         // identify class type, get generic param if the class is collection
         DeclaredType declaredType = (DeclaredType) field.asType();
         if(isCollection(fieldType)) {
@@ -177,18 +183,6 @@ public class GrpcApiGenerator implements ApiGenerator {
     private static boolean isCollection(String fieldType) {
         return Stream.of("List", "ArrayList", "Set", "HashSet", "Collection").anyMatch(fieldType::contains);
     }
-
-//    private void processReferenceType(DeclaredType declaredType, StringBuilder sb, String fieldName, int i, List<String> nestedClassList) {
-//        String simpleClassName = declaredType == null ? "Object"
-//                : declaredType.asElement().getSimpleName().toString();
-//        String protoName = map.get(simpleClassName);
-//        if(protoName != null) {
-//            appendFieldRecord(sb, protoName, fieldName, i);
-//        } else {
-//            appendFieldRecord(sb, simpleClassName, fieldName, i);
-//            nestedClassList.add(generateMessage(declaredType));
-//        }
-//    }
 
     private String getProtoName(String fieldType) {
         String protoName = map.get(fieldType);
