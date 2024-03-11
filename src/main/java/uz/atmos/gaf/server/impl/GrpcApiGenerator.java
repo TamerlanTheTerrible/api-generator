@@ -130,8 +130,6 @@ public class GrpcApiGenerator implements ApiGenerator {
         }
     }
 
-
-
     private String getReturnTypeName(TypeMirror returnType, List<String> messages) {
         final TypeKind kind = returnType.getKind();
         if(kind.isPrimitive()) {
@@ -178,12 +176,14 @@ public class GrpcApiGenerator implements ApiGenerator {
     private String generateMessage(TypeMirror typeMirror) {
         StringBuilder sb = new StringBuilder();
         // Process return type (if it's a class)
-        if (typeMirror.getKind() == TypeKind.DECLARED && ((DeclaredType) typeMirror).asElement().getKind() == ElementKind.CLASS) {
-            // Get the return type's element
-            Element returnTypeElement = ((DeclaredType) typeMirror).asElement();
-            generateMessage(returnTypeElement, sb);
+        if (typeMirror.getKind() == TypeKind.DECLARED ) {
+            if (((DeclaredType) typeMirror).asElement().getKind() == ElementKind.CLASS) {
+                generateMessage(((DeclaredType) typeMirror).asElement(), sb);
+            } else if (((DeclaredType) typeMirror).asElement().getKind() == ElementKind.ENUM) {
+                generateEnum(((DeclaredType) typeMirror).asElement(), sb);
+            }
         } else {
-            //TODO
+
         }
 
         return sb.toString();
@@ -223,6 +223,24 @@ public class GrpcApiGenerator implements ApiGenerator {
         }
         sb.append("}");
         nestedMessages.forEach(m -> sb.append("\n").append(m));
+    }
+
+    private void generateEnum(Element element, StringBuilder sb) {
+        // filter elements
+        List<? extends Element> fields = element.getEnclosedElements()
+                .stream()
+                .filter(e -> e.getKind() == ElementKind.ENUM_CONSTANT)
+                .toList();
+
+        sb.append("\nenum ").append(element.getSimpleName()).append(" {\n");
+        for(int i=0; i<fields.size(); i++) {
+            sb.append(" ")
+                    .append(fields.get(i))
+                    .append(" = ")
+                    .append(i)
+                    .append(";\n");
+        }
+        sb.append("}\n");
     }
 
     private void processPrimitive(StringBuilder sb, Element element, int i) {
