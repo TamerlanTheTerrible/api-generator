@@ -76,6 +76,7 @@ public class GrpcApiGenerator implements ApiGenerator {
                 option java_multiple_files = true;
                 
                 import "google/protobuf/any.proto";
+                import "google/protobuf/empty.proto";
 
                 service Proto%s {
                 """.formatted(element.getSimpleName().toString()));
@@ -119,7 +120,6 @@ public class GrpcApiGenerator implements ApiGenerator {
         }
         Element element = ((DeclaredType) parameters.get(0).asType()).asElement();
         String className = element.getSimpleName().toString();
-        System.out.println("PARAM CLASSNAME: " + className);
         if(map.containsKey(className)) {
             final String protoName = map.get(className);
             String wrapperName = createWrapperName(protoName);
@@ -133,12 +133,15 @@ public class GrpcApiGenerator implements ApiGenerator {
 
 
     private String getReturnTypeName(TypeMirror returnType, List<String> messages) {
-        if(returnType.getKind().isPrimitive()) {
+        final TypeKind kind = returnType.getKind();
+        if(kind.isPrimitive()) {
             //write proto wrapper of this primitive
             String protoName = getProtoName(((PrimitiveType) returnType).toString());
             String wrapperName = createWrapperName(protoName);
             addToTheMessageList(messages, wrapperName, protoName);
             return wrapperName;
+        } else if(kind == TypeKind.VOID) {
+            return "google.protobuf.Empty";
         } else {
             String className = ((DeclaredType) returnType).asElement().getSimpleName().toString();
             //write proto wrapper of this java primitive wrapper class
@@ -212,6 +215,8 @@ public class GrpcApiGenerator implements ApiGenerator {
                 processReferenceType(sb, field, i, nestedMessages);
             } else if (fieldKind == TypeKind.ARRAY) {
                 processArray(sb, field, i);
+            } else if (fieldKind == TypeKind.VOID) {
+                continue;
             } else {
                 processPrimitive(sb, field, i);
             }
