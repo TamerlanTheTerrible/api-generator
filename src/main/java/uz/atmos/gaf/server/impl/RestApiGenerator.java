@@ -103,27 +103,4 @@ public class RestApiGenerator implements ApiGenerator {
 
         return !sb.isEmpty() ? sb.substring(0, sb.length()-1) : sb.toString();
     }
-
-    class TestClass {
-        private String testString;
-        private String testInteger;
-
-        public TestClass() {}
-
-        public String getTestString() {
-            return testString;
-        }
-
-        public void setTestString(String testString) {
-            this.testString = testString;
-        }
-
-        public String getTestInteger() {
-            return testInteger;
-        }
-
-        public void setTestInteger(String testInteger) {
-            this.testInteger = testInteger;
-        }
-    }
 }
