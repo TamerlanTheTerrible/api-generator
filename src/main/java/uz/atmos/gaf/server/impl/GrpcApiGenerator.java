@@ -17,6 +17,7 @@ import javax.tools.StandardLocation;
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
 import java.util.*;
+import java.util.stream.Stream;
 
 /**
  * Created by Temurbek Ismoilov on 05/03/24.
@@ -120,15 +121,11 @@ public class GrpcApiGenerator implements ApiGenerator {
                     System.out.println("Message field type: " + fieldType + ", name: " + fieldName + ", kind: " + fieldKind);
                     // Process class type
                     if(fieldKind == TypeKind.DECLARED) {
-                        processReferenceType(field, fieldType, sb, fieldName, i, nestedMessages);
-                    }
-                    // Process array type
-                    else if (fieldKind == TypeKind.ARRAY) {
-                        processArray(fieldType, sb, fieldName, i);
-                    }
-                    // Process primitive type
-                    else {
-                        processPrimitive(fieldType, sb, fieldName, i);
+                        processReferenceType(sb, field, fieldType, fieldName, i, nestedMessages);
+                    } else if (fieldKind == TypeKind.ARRAY) {
+                        processArray(sb, fieldType, fieldName, i);
+                    } else {
+                        processPrimitive(sb, fieldType, fieldName, i);
                     }
                 }
             }
@@ -143,47 +140,55 @@ public class GrpcApiGenerator implements ApiGenerator {
         return sb.toString();
     }
 
-    private void processPrimitive(String fieldType, StringBuilder sb, String fieldName, int i) {
+    private void processPrimitive(StringBuilder sb, String fieldType,String fieldName, int i) {
         final String protoName = getProtoName(fieldType);
         appendFieldRecord(sb, protoName, fieldName, i);
     }
 
-    private void processArray(String fieldType, StringBuilder sb, String fieldName, int i) {
+    private void processArray(StringBuilder sb, String fieldType, String fieldName, int i) {
         final String protoName = getProtoName(fieldType.replace("[", "").replace("]", ""));
         sb.append(" ").append("repeated");
         appendFieldRecord(sb, protoName, fieldName, i);
     }
 
-    private void processReferenceType(Element field, String fieldType, StringBuilder sb, String fieldName, int i, List<String> nestedMessages) {
-        final DeclaredType declaredType = (DeclaredType) field.asType();
-        // Process List type
-        if(fieldType.contains("List")) {
-            //Get simple class name
+    private void processReferenceType(StringBuilder sb, Element field, String fieldType,  String fieldName, int i, List<String> nestedMessages) {
+        // identify class type, get generic param if the class is collection
+        DeclaredType declaredType = (DeclaredType) field.asType();
+        if(isCollection(fieldType)) {
             List<? extends TypeMirror> genericParamTypes = declaredType.getTypeArguments();
-            DeclaredType declaredType1 = genericParamTypes.isEmpty() ? null
-                    : ((DeclaredType) genericParamTypes.get(0));
-            //Write field if the type has appropriate proto mapping,
-            //else the type is a user declared class, so write the field and call the method generateMessage() recursively
+            declaredType = genericParamTypes.isEmpty() ? null : ((DeclaredType) genericParamTypes.get(0));
             sb.append(" ").append("repeated");
-            processReferenceType(declaredType1, sb, fieldName, i, nestedMessages);
         }
-        // Process singular type
-        else {
-            processReferenceType(declaredType, sb, fieldName, i, nestedMessages);
-        }
-    }
-
-    private void processReferenceType(DeclaredType declaredType, StringBuilder sb, String fieldName, int i, List<String> nestedClassList) {
-        String simpleClassName = declaredType == null ? "Object"
-                : declaredType.asElement().getSimpleName().toString();
+        // get proto name
+        String simpleClassName = declaredType == null ? "Object" : declaredType.asElement().getSimpleName().toString();
         String protoName = map.get(simpleClassName);
+        // Write field if the type has appropriate proto mapping,
         if(protoName != null) {
             appendFieldRecord(sb, protoName, fieldName, i);
         } else {
+            // else the type is declared class by user, so write the field and call the method generateMessage() recursively
             appendFieldRecord(sb, simpleClassName, fieldName, i);
-            nestedClassList.add(generateMessage(declaredType));
+            if(declaredType != null) {
+                nestedMessages.add(generateMessage(declaredType));
+            }
         }
     }
+
+    private static boolean isCollection(String fieldType) {
+        return Stream.of("List", "ArrayList", "Set", "HashSet", "Collection").anyMatch(fieldType::contains);
+    }
+
+//    private void processReferenceType(DeclaredType declaredType, StringBuilder sb, String fieldName, int i, List<String> nestedClassList) {
+//        String simpleClassName = declaredType == null ? "Object"
+//                : declaredType.asElement().getSimpleName().toString();
+//        String protoName = map.get(simpleClassName);
+//        if(protoName != null) {
+//            appendFieldRecord(sb, protoName, fieldName, i);
+//        } else {
+//            appendFieldRecord(sb, simpleClassName, fieldName, i);
+//            nestedClassList.add(generateMessage(declaredType));
+//        }
+//    }
 
     private String getProtoName(String fieldType) {
         String protoName = map.get(fieldType);
