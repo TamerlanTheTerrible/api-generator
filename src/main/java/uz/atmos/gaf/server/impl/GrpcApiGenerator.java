@@ -3,12 +3,12 @@ package uz.atmos.gaf.server.impl;
 import uz.atmos.gaf.exception.GafException;
 import uz.atmos.gaf.server.ApiGenerator;
 
-import javax.annotation.processing.Filer;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.FileObject;
@@ -49,9 +49,8 @@ public class GrpcApiGenerator implements ApiGenerator {
     public void generate(Element element, ProcessingEnvironment processingEnv) {
         final String serviceName = element.getSimpleName().toString();
         try {
-            System.out.println("Invoking " + this.getClass().getSimpleName() + " for " + element);
+            System.out.println("Invoking " + this.getClass().getSimpleName() + " for " + serviceName);
             // Create a new resource file (here, we'll create a properties file)
-
             FileObject resourceFile = processingEnv.getFiler().createResource(
                     StandardLocation.CLASS_OUTPUT,
                     element.getEnclosingElement().toString(), // No package for this example
@@ -75,23 +74,74 @@ public class GrpcApiGenerator implements ApiGenerator {
                 
                 import "google/protobuf/any.proto";
 
-                """);
+                service Proto%s {
+                """.formatted(element.getSimpleName().toString()));
 
             // handle methods
             final List<? extends Element> methods = element.getEnclosedElements().stream()
                     .filter(e -> ElementKind.METHOD.equals(e.getKind()))
                     .toList();
 
+            List<String> messages = new ArrayList<>();
             for(Element methodElement: methods) {
                 TypeMirror returnType = ((ExecutableElement) methodElement).getReturnType();
-                String returnTypeMessage = generateMessage(returnType);
-                writer.write(returnTypeMessage);
+                final String returnTypeName = getReturnTypeName(returnType, messages);
+
+                writer.print("""
+                          rpc %s() returns (%s){};
+                        """.formatted(
+                        methodElement.getSimpleName(),
+                        returnTypeName
+                ));
+                messages.add(generateMessage(returnType));
             }
+            writer.write("}\n");
+            messages.forEach(writer::write);
         } catch (IOException e) {
             System.err.println(e.getMessage());
             throw new RuntimeException(e);
         }
 
+    }
+
+    private String getReturnTypeName(TypeMirror returnType, List<String> messages) {
+        if(returnType.getKind().isPrimitive()) {
+            //write proto wrapper of this primitive
+            String protoName = getProtoName(((PrimitiveType) returnType).toString());
+            String wrapperName = createWrapperName(protoName);
+            addToTheMessageList(messages, wrapperName, protoName);
+            return wrapperName;
+        } else {
+            String className = ((DeclaredType) returnType).asElement().getSimpleName().toString();
+            //write proto wrapper of this java primitive wrapper class
+            if (map.containsKey(className)) {
+                String protoName = map.get(className);
+                String wrapperName = createWrapperName(protoName);
+                addToTheMessageList(messages, wrapperName, protoName);
+                return wrapperName;
+            } else {
+                return className;
+            }
+        }
+    }
+
+    private static String createWrapperName(String protoName) {
+        return Character.toUpperCase(protoName.charAt(0)) + protoName.substring(1) + "Wrapper";
+    }
+
+    private void addToTheMessageList(List<String> messages, String wrapperName, String protoName) {
+        String message = """
+                
+                message %s {
+                 %s %s = 1;
+                }
+                
+                """ .formatted(wrapperName, protoName, protoName);
+        //add wrapped message to the proto file, if it is not added already
+        if (!convertedClassSet.contains(wrapperName)) {
+            convertedClassSet.add(wrapperName);
+            messages.add(message);
+        }
     }
 
     private String generateMessage(TypeMirror typeMirror) {
@@ -118,7 +168,7 @@ public class GrpcApiGenerator implements ApiGenerator {
         System.out.println("Message name: " + element.getSimpleName());
 
         // write message name
-        sb.append("message ").append(element.getSimpleName()).append(" {\n");
+        sb.append("\n").append("message ").append(element.getSimpleName()).append(" {\n");
 
         // Process each field
         for (int i=0; i<fields.size(); i++) {
@@ -138,7 +188,7 @@ public class GrpcApiGenerator implements ApiGenerator {
                 processPrimitive(sb, field, i);
             }
         }
-        sb.append("\n}");
+        sb.append("}");
         nestedMessages.forEach(m -> sb.append("\n").append(m));
     }
 
