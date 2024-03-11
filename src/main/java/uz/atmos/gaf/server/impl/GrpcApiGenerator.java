@@ -13,6 +13,7 @@ import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.FileObject;
 import javax.tools.StandardLocation;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.*;
 import java.util.stream.Stream;
@@ -46,52 +47,51 @@ public class GrpcApiGenerator implements ApiGenerator {
 
     @Override
     public void generate(Element element, ProcessingEnvironment processingEnv) {
+        final String serviceName = element.getSimpleName().toString();
         try {
             System.out.println("Invoking " + this.getClass().getSimpleName() + " for " + element);
-            // Get the Filer from the ProcessingEnvironment
-            Filer filer = processingEnv.getFiler();
-
-            String className = element.getSimpleName().toString().replace("Service", "");
             // Create a new resource file (here, we'll create a properties file)
-            FileObject resourceFile = filer.createResource(
+
+            FileObject resourceFile = processingEnv.getFiler().createResource(
                     StandardLocation.CLASS_OUTPUT,
                     element.getEnclosingElement().toString(), // No package for this example
-                    className + ".proto", // Name of the resource file
+                    serviceName.replace("Service", "") + ".proto", // Name of the resource file
                     element // Associated elements
             );
 
             // Write content to the resource file
-            try (PrintWriter writer = new PrintWriter(resourceFile.openWriter())) {
-                writer.print("""
-                        syntax = "proto3";
-                        package com.proto;
-                        option java_multiple_files = true;
-                        
-                        import "google/protobuf/any.proto";
-
-                        """);
-
-                // fields
-                final List<? extends Element> enclosedElements = element.getEnclosedElements();
-                // handle methods
-                final List<? extends Element> methods = enclosedElements.stream()
-                        .filter(e -> ElementKind.METHOD.equals(e.getKind()))
-                        .toList();
-
-                for(Element methodElement: methods) {
-                    generateService((ExecutableElement) methodElement, writer);
-                }
-            }
+            generate(element, resourceFile);
         } catch (Exception e) {
-            System.out.println("ERROR: " + e.getMessage());
-            e.printStackTrace(); // Handle or log the exception as needed
+            System.err.println("Error while processing " + serviceName + " : " + e.getMessage());
         }
     }
 
-    private void generateService(ExecutableElement methodElement, PrintWriter writer) {
-        TypeMirror returnType = methodElement.getReturnType();
-        String returnTypeMessage = generateMessage(returnType);
-        writer.write(returnTypeMessage);
+    private void generate(Element element, FileObject resourceFile) {
+        try (PrintWriter writer = new PrintWriter(resourceFile.openWriter())) {
+            writer.print("""
+                syntax = "proto3";
+                package com.proto;
+                option java_multiple_files = true;
+                
+                import "google/protobuf/any.proto";
+
+                """);
+
+            // handle methods
+            final List<? extends Element> methods = element.getEnclosedElements().stream()
+                    .filter(e -> ElementKind.METHOD.equals(e.getKind()))
+                    .toList();
+
+            for(Element methodElement: methods) {
+                TypeMirror returnType = ((ExecutableElement) methodElement).getReturnType();
+                String returnTypeMessage = generateMessage(returnType);
+                writer.write(returnTypeMessage);
+            }
+        } catch (IOException e) {
+            System.err.println(e.getMessage());
+            throw new RuntimeException(e);
+        }
+
     }
 
     private String generateMessage(TypeMirror typeMirror) {
