@@ -123,7 +123,7 @@ public class GrpcApiGenerator implements ApiGenerator {
         if(map.containsKey(className)) {
             final String protoName = map.get(className);
             String wrapperName = createWrapperName(protoName);
-            addToTheMessageList(messages, wrapperName, protoName);
+            addToTheMessageList(messages, wrapperName, protoName + " " + protoName.toLowerCase());
             return wrapperName;
         } else {
             return className;
@@ -136,20 +136,34 @@ public class GrpcApiGenerator implements ApiGenerator {
             //write proto wrapper of this primitive
             String protoName = getProtoName(((PrimitiveType) returnType).toString());
             String wrapperName = createWrapperName(protoName);
-            addToTheMessageList(messages, wrapperName, protoName);
+            addToTheMessageList(messages, wrapperName, protoName + " " + protoName.toLowerCase());
             return wrapperName;
         } else if(kind == TypeKind.VOID) {
             return "google.protobuf.Empty";
         } else {
-            String className = ((DeclaredType) returnType).asElement().getSimpleName().toString();
-            //write proto wrapper of this java primitive wrapper class
-            if (map.containsKey(className)) {
-                String protoName = map.get(className);
-                String wrapperName = createWrapperName(protoName);
-                addToTheMessageList(messages, wrapperName, protoName);
+            DeclaredType declaredType = (DeclaredType) returnType;
+            String className = declaredType.asElement().getSimpleName().toString();
+            if(isCollection(className)) {
+                //write proto wrapper for collection
+                List<? extends TypeMirror> genericParamTypes = declaredType.getTypeArguments();
+                className = genericParamTypes.isEmpty() ? "Object" : ((DeclaredType) genericParamTypes.get(0)).asElement().getSimpleName().toString();
+                System.out.println("HERE: " + className);
+                if (map.containsKey(className)) {
+                    className = map.get(className);
+                }
+                String wrapperName = createWrapperName(className + "Array");
+                addToTheMessageList(messages, wrapperName, "repeated " + className + " " + className.toLowerCase());
                 return wrapperName;
             } else {
-                return className;
+                //write proto wrapper of this java primitive wrapper class
+                if (map.containsKey(className)) {
+                    String protoName = map.get(className);
+                    String wrapperName = createWrapperName(protoName);
+                    addToTheMessageList(messages, wrapperName, protoName + " " + protoName.toLowerCase());
+                    return wrapperName;
+                } else {
+                    return className;
+                }
             }
         }
     }
@@ -158,17 +172,16 @@ public class GrpcApiGenerator implements ApiGenerator {
         return Character.toUpperCase(protoName.charAt(0)) + protoName.substring(1) + "Wrapper";
     }
 
-    private void addToTheMessageList(List<String> messages, String wrapperName, String protoName) {
+    private void addToTheMessageList(List<String> messages, String messageName, String messageContent) {
         //add wrapped message to the proto file, if it is not added already
-        if (!convertedClassSet.contains(wrapperName)) {
-            convertedClassSet.add(wrapperName);
-
+        if (!convertedClassSet.contains(messageName)) {
+            convertedClassSet.add(messageName);
             String message = """
                 
                 message %s {
-                 %s %s = 1;
+                 %s = 1;
                 }
-                """ .formatted(wrapperName, protoName, protoName);
+                """ .formatted(messageName, messageContent);
             messages.add(message);
         }
     }
