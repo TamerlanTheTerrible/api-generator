@@ -144,10 +144,10 @@ public class GrpcApiGenerator implements ApiGenerator {
             DeclaredType declaredType = (DeclaredType) returnType;
             String className = declaredType.asElement().getSimpleName().toString();
             if(isCollection(className)) {
-                //write proto wrapper for collection
+                // get collection generic type
                 List<? extends TypeMirror> genericParamTypes = declaredType.getTypeArguments();
                 className = genericParamTypes.isEmpty() ? "Object" : ((DeclaredType) genericParamTypes.get(0)).asElement().getSimpleName().toString();
-                System.out.println("HERE: " + className);
+                // change classname to proto type, if possible
                 if (map.containsKey(className)) {
                     className = map.get(className);
                 }
