@@ -80,6 +80,19 @@
 			<version>1.18.30</version> <!-- Replace with the latest version -->
 			<scope>provided</scope>
 		</dependency>
+
+		<!-- FOR CLIENT -->
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-openfeign</artifactId>
+			<version>4.1.0</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/com.netflix.feign/feign-jackson -->
+		<dependency>
+			<groupId>com.netflix.feign</groupId>
+			<artifactId>feign-jackson</artifactId>
+			<version>8.18.0</version>
+		</dependency>
 	</dependencies>
 
 	<build>

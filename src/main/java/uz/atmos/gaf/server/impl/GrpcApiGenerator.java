@@ -90,7 +90,7 @@ public class GrpcApiGenerator implements ApiGenerator {
             for(Element methodElement: methods) {
                 //process return type
                 TypeMirror returnType = ((ExecutableElement) methodElement).getReturnType();
-                String returnTypeName = getReturnTypeName(returnType, messages);
+                String returnTypeName = generateReturnType(returnType, messages);
                 messages.add(generateMessage(returnType));
                 //process params
                 List<? extends VariableElement> parameters = ((ExecutableElement) methodElement).getParameters();
@@ -130,7 +130,7 @@ public class GrpcApiGenerator implements ApiGenerator {
         }
     }
 
-    private String getReturnTypeName(TypeMirror returnType, List<String> messages) {
+    private String generateReturnType(TypeMirror returnType, List<String> messages) {
         final TypeKind kind = returnType.getKind();
         if(kind.isPrimitive()) {
             //write proto wrapper of this primitive
