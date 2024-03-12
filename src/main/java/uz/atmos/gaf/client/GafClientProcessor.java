@@ -1,4 +1,4 @@
-package uz.atmos.gaf.server;
+package uz.atmos.gaf.client;
 
 import com.google.auto.service.AutoService;
 import uz.atmos.gaf.ApiType;
@@ -11,32 +11,30 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Created by Temurbek Ismoilov on 27/02/24.
+ * Created by Temurbek Ismoilov on 12/03/24.
  */
 
 @AutoService(Processor.class)
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
-@SupportedAnnotationTypes("uz.atmos.gaf.server.GafServer")
-public class GafServerProcessor extends AbstractProcessor {
-
+@SupportedAnnotationTypes("uz.atmos.gaf.client.GafClient")
+public class GafClientProcessor extends AbstractProcessor {
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-        for (TypeElement annotation : annotations) {
-            for (Element element : roundEnv.getElementsAnnotatedWith(annotation)) {
-                GafServer gafServerAnnotation = element.getAnnotation(GafServer.class);
-                ApiType[] types = gafServerAnnotation.types();
+        for(TypeElement annotation: annotations) {
+            for(Element element: roundEnv.getElementsAnnotatedWith(annotation)) {
+                GafClient gafClientAnnotation = element.getAnnotation(GafClient.class);
+                ApiType[] types = gafClientAnnotation.types();
                 Set<ApiType> typeSet = new java.util.HashSet<>(Set.of(types));
 
                 if (typeSet.isEmpty()) {
                     typeSet.addAll(List.of(ApiType.values()));
                 }
 
-                for (ApiType type : typeSet) {
-                    ApiGeneratorContainer.get(type).generate(element, processingEnv);
+                for (ApiType type: typeSet) {
+                    ClientGeneratorContainer.get(type).generate(element, processingEnv, gafClientAnnotation);
                 }
             }
         }
-
-        return true;
+        return false;
     }
 }
