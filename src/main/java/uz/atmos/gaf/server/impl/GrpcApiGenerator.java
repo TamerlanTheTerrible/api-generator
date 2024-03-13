@@ -1,5 +1,6 @@
 package uz.atmos.gaf.server.impl;
 
+import uz.atmos.gaf.ElementUtil;
 import uz.atmos.gaf.exception.GafException;
 import uz.atmos.gaf.server.ApiGenerator;
 
@@ -143,7 +144,7 @@ public class GrpcApiGenerator implements ApiGenerator {
         } else {
             DeclaredType declaredType = (DeclaredType) returnType;
             String className = declaredType.asElement().getSimpleName().toString();
-            if(isCollection(className)) {
+            if(ElementUtil.isCollection(className)) {
                 // get collection generic type
                 List<? extends TypeMirror> genericParamTypes = declaredType.getTypeArguments();
                 className = genericParamTypes.isEmpty() ? "Object" : ((DeclaredType) genericParamTypes.get(0)).asElement().getSimpleName().toString();
@@ -274,7 +275,7 @@ public class GrpcApiGenerator implements ApiGenerator {
         String fieldName = field.getSimpleName().toString();
         // identify class type, get generic param if the class is collection
         DeclaredType declaredType = (DeclaredType) field.asType();
-        if(isCollection(fieldType)) {
+        if(ElementUtil.isCollection(fieldType)) {
             List<? extends TypeMirror> genericParamTypes = declaredType.getTypeArguments();
             declaredType = genericParamTypes.isEmpty() ? null : ((DeclaredType) genericParamTypes.get(0));
             sb.append(" ").append("repeated");
@@ -294,10 +295,6 @@ public class GrpcApiGenerator implements ApiGenerator {
                 nestedMessages.add(generateMessage(declaredType));
             }
         }
-    }
-
-    private static boolean isCollection(String fieldType) {
-        return Stream.of("List", "ArrayList", "Set", "HashSet", "Collection").anyMatch(fieldType::contains);
     }
 
     private String getProtoName(String fieldType) {
