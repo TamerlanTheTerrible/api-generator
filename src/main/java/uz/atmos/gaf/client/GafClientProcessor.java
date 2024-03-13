@@ -1,6 +1,7 @@
 package uz.atmos.gaf.client;
 
 import com.google.auto.service.AutoService;
+import org.springframework.cloud.openfeign.FeignClient;
 import uz.atmos.gaf.ApiType;
 
 import javax.annotation.processing.*;
@@ -32,6 +33,9 @@ public class GafClientProcessor extends AbstractProcessor {
                 }
 
                 for (ApiType type: typeSet) {
+                    if(type == ApiType.REST && element.getAnnotation(FeignClient.class) != null) {
+                        continue;
+                    }
                     ClientGeneratorContainer.get(type).generate(element, processingEnv, gafClientAnnotation);
                 }
             }
