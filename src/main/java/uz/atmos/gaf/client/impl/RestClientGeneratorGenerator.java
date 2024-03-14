@@ -1,6 +1,8 @@
 package uz.atmos.gaf.client.impl;
 
+import org.springframework.web.bind.annotation.RequestMethod;
 import uz.atmos.gaf.client.GafClient;
+import uz.atmos.gaf.client.GafMethod;
 import uz.atmos.gaf.client.RequestHeader;
 import uz.atmos.gaf.exception.GafException;
 
@@ -40,12 +42,19 @@ public class RestClientGeneratorGenerator implements uz.atmos.gaf.client.ClientG
             List<String> methodStrings = new ArrayList<>();
             for(Element methodElement: methods) {
                 ExecutableElement method = (ExecutableElement) methodElement;
+                RequestMethod requestMethod = getRequestMethod(methodElement);
                 String parameters = processParams(method);
                 String returnType = processType(method);
                 String methodString = """
                             @Override
+                            @RequestMapping(method = RequestMethod.%s, value = "%s")
                             %s %s(%s);
-                        """.formatted(returnType, method.getSimpleName(), parameters);
+                        """.formatted(
+                                getRequestMethod(methodElement),
+                        getUrlValue(methodElement),
+                        returnType,
+                        method.getSimpleName(),
+                        parameters);
                 methodStrings.add(methodString);
             }
 
@@ -75,6 +84,27 @@ public class RestClientGeneratorGenerator implements uz.atmos.gaf.client.ClientG
             System.out.println("ApiProcessor error: " + e);
             throw new RuntimeException(e);
         }
+    }
+
+    private RequestMethod getRequestMethod(Element methodElement) {
+        GafMethod gafMethodAnnotation = methodElement.getAnnotation(GafMethod.class);
+        if (gafMethodAnnotation == null) {
+            return RequestMethod.POST;
+        }
+
+        final RequestMethod requestMethod = gafMethodAnnotation.method();
+        return requestMethod != null ? requestMethod : RequestMethod.POST;
+    }
+
+
+    private String getUrlValue(Element methodElement) {
+        GafMethod gafMethodAnnotation = methodElement.getAnnotation(GafMethod.class);
+        if (gafMethodAnnotation == null) {
+            return "";
+        }
+
+        final String urlValue = gafMethodAnnotation.value();
+        return urlValue != null ? urlValue : "";
     }
 
     private String processType(ExecutableElement method) {

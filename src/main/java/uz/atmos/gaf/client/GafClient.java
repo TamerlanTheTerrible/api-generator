@@ -16,5 +16,4 @@ import java.lang.annotation.Target;
 public @interface GafClient {
     ApiType[] types() default {};
     String url();
-    String[] header() default {};
 }
