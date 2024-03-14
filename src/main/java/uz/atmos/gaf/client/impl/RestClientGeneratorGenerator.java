@@ -25,6 +25,55 @@ public class RestClientGeneratorGenerator implements uz.atmos.gaf.client.ClientG
 
     @Override
     public void generate(Element element, ProcessingEnvironment processingEnv, GafClient gafClientAnnotation) {
+        generateSourceCode(element, processingEnv, gafClientAnnotation);
+        generateFeignConfig(element, processingEnv, gafClientAnnotation);
+    }
+
+    private void generateFeignConfig(Element element, ProcessingEnvironment processingEnv, GafClient gafClientAnnotation) {
+        String serviceClassName = element.getSimpleName().toString();
+        String className = serviceClassName.replace("Service", "");
+        String packageName = element.getEnclosingElement().toString();
+        String apiName = className + "FeignConfig";
+        String builderFullName = packageName + "." + apiName;
+
+        String url = gafClientAnnotation.url();
+        if (url == null) {
+            url = "";
+        }
+
+        try (PrintWriter writer = new PrintWriter(processingEnv.getFiler().createSourceFile(builderFullName).openWriter())){
+            writer.println("""
+                    package %s;
+                                        
+                    import feign.Feign;
+                    import org.springframework.cloud.openfeign.support.SpringMvcContract;
+                    import org.springframework.context.annotation.Bean;
+                    import org.springframework.context.annotation.Configuration;
+                                        
+                    @Configuration
+                    public class %s {
+                                        
+                        @Bean
+                        public %s %s() {
+                            return Feign.builder()
+                                    .contract(new SpringMvcContract())
+                                    .target(%sFeignClient.class, "%s");
+                        }
+                    }""".formatted(packageName,
+                    apiName,
+                    serviceClassName,
+                    serviceClassName.substring(0,1).toLowerCase() + serviceClassName.substring(1),
+                    className,
+                    url
+                    )
+            );
+        } catch (IOException e) {
+            System.out.println("Feign config generation error: " + e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void generateSourceCode(Element element, ProcessingEnvironment processingEnv, GafClient gafClientAnnotation) {
         System.out.println("Invoking " + this.getClass().getSimpleName() + " for " + element);
 
         String serviceClassName = element.getSimpleName().toString();
@@ -42,12 +91,11 @@ public class RestClientGeneratorGenerator implements uz.atmos.gaf.client.ClientG
             List<String> methodStrings = new ArrayList<>();
             for(Element methodElement: methods) {
                 ExecutableElement method = (ExecutableElement) methodElement;
-                RequestMethod requestMethod = getRequestMethod(methodElement);
                 String parameters = processParams(method);
                 String returnType = processType(method);
                 String methodString = """
                             @Override
-                            @RequestMapping(method = RequestMethod.%s, value = "%s")
+                            @%sMapping("%s")
                             %s %s(%s);
                         """.formatted(
                                 getRequestMethod(methodElement),
@@ -86,14 +134,14 @@ public class RestClientGeneratorGenerator implements uz.atmos.gaf.client.ClientG
         }
     }
 
-    private RequestMethod getRequestMethod(Element methodElement) {
+    private String getRequestMethod(Element methodElement) {
         GafMethod gafMethodAnnotation = methodElement.getAnnotation(GafMethod.class);
         if (gafMethodAnnotation == null) {
-            return RequestMethod.POST;
+            return "Post";
         }
 
         final RequestMethod requestMethod = gafMethodAnnotation.method();
-        return requestMethod != null ? requestMethod : RequestMethod.POST;
+        return "Post";
     }
 
 
