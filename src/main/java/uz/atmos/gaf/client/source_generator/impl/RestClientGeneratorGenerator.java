@@ -1,14 +1,20 @@
-package uz.atmos.gaf.client.impl;
+package uz.atmos.gaf.client.source_generator.impl;
 
 import org.springframework.web.bind.annotation.RequestMethod;
 import uz.atmos.gaf.client.GafClient;
 import uz.atmos.gaf.client.GafMethod;
 import uz.atmos.gaf.client.RequestHeader;
+import uz.atmos.gaf.client.configuration.GafClientConfiguration;
+import uz.atmos.gaf.client.source_generator.ClientGenerator;
 import uz.atmos.gaf.exception.GafException;
 
 import javax.annotation.processing.ProcessingEnvironment;
-import javax.lang.model.element.*;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.MirroredTypeException;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import java.io.IOException;
@@ -19,7 +25,7 @@ import java.util.*;
  * Created by Temurbek Ismoilov on 12/03/24.
  */
 
-public class RestClientGeneratorGenerator implements uz.atmos.gaf.client.ClientGenerator {
+public class RestClientGeneratorGenerator implements ClientGenerator {
 
     private final Set<String> packages = new HashSet<>();
 
@@ -34,6 +40,7 @@ public class RestClientGeneratorGenerator implements uz.atmos.gaf.client.ClientG
         String className = serviceClassName.replace("Service", "");
         String packageName = element.getEnclosingElement().toString();
         String apiName = className + "FeignConfig";
+        String feignClientClassName = className + "FeignClient";
         String builderFullName = packageName + "." + apiName;
 
         String url = gafClientAnnotation.url();
@@ -44,33 +51,134 @@ public class RestClientGeneratorGenerator implements uz.atmos.gaf.client.ClientG
         try (PrintWriter writer = new PrintWriter(processingEnv.getFiler().createSourceFile(builderFullName).openWriter())){
             writer.println("""
                     package %s;
-                                        
-                    import feign.Feign;
+                                
+                    import ch.qos.logback.classic.Level;
+                    import org.slf4j.LoggerFactory;
+                    import feign.*;
+                    import feign.codec.*;
+                    import feign.slf4j.Slf4jLogger;
+                    import feign.jackson.JacksonDecoder;
+                    import feign.jackson.JacksonEncoder;
                     import org.springframework.cloud.openfeign.support.SpringMvcContract;
                     import org.springframework.context.annotation.Bean;
                     import org.springframework.context.annotation.Configuration;
+                    import org.springframework.cloud.openfeign.support.SpringMvcContract;
+                    import uz.atmos.gaf.client.configuration.GafClientConfiguration;                                        
+                    
+                    import java.util.ArrayList;
+                    import java.util.List;
+                    import java.util.Map;
                                         
                     @Configuration
                     public class %s {
                                         
                         @Bean
                         public %s %s() {
+                            GafClientConfiguration config = gafClientConfiguration();
+                            
                             return Feign.builder()
                                     .contract(new SpringMvcContract())
-                                    .target(%sFeignClient.class, "%s");
+                                    .requestInterceptors(getInterceptors(config))
+                                    .options(new Request.Options(config.connectionTimeout(), config.readTimeout()))
+                                    .encoder(getEncoder(config))
+                                    .decoder(getDecoder(config))
+                                    .errorDecoder(getErrorDecoder(config))
+                                    .logger(getLogger())
+                                    .logLevel(getLogLevel(config))
+                                    .retryer(Retryer.NEVER_RETRY)
+                                    .target(%s.class, "%s");
                         }
+                                                                
+                        private GafClientConfiguration gafClientConfiguration() {
+                            return %s;
+                        }
+                        
+                        private Slf4jLogger getLogger() {
+                            ch.qos.logback.classic.Logger specificLogger = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(this.getClass().getPackageName());
+                            specificLogger.setLevel(Level.DEBUG);
+                            return new Slf4jLogger(specificLogger);
+                        }
+                                                              
+                        private Logger.Level getLogLevel(GafClientConfiguration config) {
+                            return switch (config.logLevel()) {
+                                case NONE -> Logger.Level.NONE;
+                                case HEADERS -> Logger.Level.HEADERS;
+                                case FULL -> Logger.Level.FULL;
+                                default -> Logger.Level.BASIC;
+                            };
+                        }
+                                        
+                        private List<RequestInterceptor> getInterceptors(GafClientConfiguration config) {
+                            List<RequestInterceptor> interceptors = new ArrayList<>(config.interceptors());
+                            if(!config.headers().isEmpty()) {
+                                interceptors.add(headerInterceptor(config));
+                            }
+                            return interceptors;
+                        }
+                                        
+                        private RequestInterceptor headerInterceptor(GafClientConfiguration config) {
+                            return requestTemplate -> {
+                                final Map<String, String> headerMap = config.headers();
+                                for (String headerName : headerMap.keySet()) {
+                                    requestTemplate.header(headerName, headerMap.get(headerName));
+                                }
+                            };
+                        }
+                                        
+                        private ErrorDecoder getErrorDecoder(GafClientConfiguration config) {
+                            return config.errorDecoder() != null ? config.errorDecoder() : new ErrorDecoder.Default();
+                        }
+                                        
+                        private Encoder getEncoder(GafClientConfiguration config) {
+                            return config.encoder() != null ? config.encoder() : new JacksonEncoder();
+                        }
+                                        
+                        private Decoder getDecoder(GafClientConfiguration config) {
+                            return config.decoder() != null ? config.decoder() : new JacksonDecoder();
+                        }    
                     }""".formatted(packageName,
                     apiName,
-                    serviceClassName,
-                    serviceClassName.substring(0,1).toLowerCase() + serviceClassName.substring(1),
-                    className,
-                    url
+                    feignClientClassName,
+                    feignClientClassName.substring(0,1).toLowerCase() + feignClientClassName.substring(1),
+                    feignClientClassName,
+                    url,
+                    getConfigClassString(gafClientAnnotation)
                     )
             );
         } catch (IOException e) {
             System.out.println("Feign config generation error: " + e);
             throw new RuntimeException(e);
         }
+    }
+
+    private String getConfigClass(GafClient gafClientAnnotation) {
+        String configClassString = "GafClientConfiguration.class";
+        Class<? extends GafClientConfiguration> clazz = null;
+        try {
+            clazz = gafClientAnnotation.configuration();
+        } catch (MirroredTypeException e) {
+            TypeMirror configurationTypeMirror = e.getTypeMirror();
+            String configClassName = getClassName(configurationTypeMirror);
+            if(!configClassName.equals("GafClientConfiguration")) {
+                configClassString = "new " + configClassName + "()";
+            }
+        }
+        return configClassString;
+    }
+
+    private String getConfigClassString(GafClient gafClientAnnotation) {
+        String configClassString = "new GafClientConfiguration(){}";
+        Class<? extends GafClientConfiguration> clazz = null;
+        try {
+            clazz = gafClientAnnotation.configuration();
+        } catch (MirroredTypeException e) {
+            TypeMirror configurationTypeMirror = e.getTypeMirror();
+            String configClassName = getClassName(configurationTypeMirror);
+            if(!configClassName.equals("GafClientConfiguration")) {
+                configClassString = "new " + configClassName + "()";
+            }
+        }
+        return configClassString;
     }
 
     private void generateSourceCode(Element element, ProcessingEnvironment processingEnv, GafClient gafClientAnnotation) {
@@ -110,6 +218,7 @@ public class RestClientGeneratorGenerator implements uz.atmos.gaf.client.ClientG
             writer.println("""
                     package %s;
                     
+                    import feign.Headers;
                     import org.springframework.cloud.openfeign.FeignClient;
                     import org.springframework.web.bind.annotation.*;
                     %s
@@ -123,6 +232,7 @@ public class RestClientGeneratorGenerator implements uz.atmos.gaf.client.ClientG
                     generateImports(),
                     className.toLowerCase() + "-feign-client",
                     gafClientAnnotation.url(),
+//                    getConfigClassString(gafClientAnnotation),
                     apiName,
                     serviceClassName,
                     String.join("\n", methodStrings)
@@ -141,7 +251,17 @@ public class RestClientGeneratorGenerator implements uz.atmos.gaf.client.ClientG
         }
 
         final RequestMethod requestMethod = gafMethodAnnotation.method();
-        return "Post";
+        return switch (requestMethod) {
+            case POST -> "Post";
+            case GET -> "Get";
+            case DELETE -> "Delete";
+            case PATCH -> "Patch";
+            case HEAD -> "Head";
+            case PUT -> "Put";
+            case OPTIONS -> "Options";
+            case TRACE -> "Trace";
+            default -> "Post";
+        };
     }
 
 
@@ -242,7 +362,6 @@ public class RestClientGeneratorGenerator implements uz.atmos.gaf.client.ClientG
         for(String pack: packages) {
             sb.append("import ").append(pack).append(";\n");
         }
-        System.out.println("IMPORTS: " + sb);
         return sb.toString();
     }
 

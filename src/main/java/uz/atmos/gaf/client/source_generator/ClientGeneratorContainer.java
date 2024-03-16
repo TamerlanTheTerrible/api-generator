@@ -1,13 +1,9 @@
-package uz.atmos.gaf.client;
+package uz.atmos.gaf.client.source_generator;
 
 import uz.atmos.gaf.ApiType;
-import uz.atmos.gaf.client.impl.GrpcClientGeneratorGenerator;
-import uz.atmos.gaf.client.impl.RestClientGeneratorGenerator;
-import uz.atmos.gaf.client.impl.ThriftClientGeneratorGenerator;
-import uz.atmos.gaf.server.ApiGenerator;
-import uz.atmos.gaf.server.impl.GrpcApiGenerator;
-import uz.atmos.gaf.server.impl.RestApiGenerator;
-import uz.atmos.gaf.server.impl.ThriftApiGenerator;
+import uz.atmos.gaf.client.source_generator.impl.GrpcClientGeneratorGenerator;
+import uz.atmos.gaf.client.source_generator.impl.RestClientGeneratorGenerator;
+import uz.atmos.gaf.client.source_generator.impl.ThriftClientGeneratorGenerator;
 
 import java.util.EnumMap;
 import java.util.Map;

@@ -1,6 +1,7 @@
 package uz.atmos.gaf.client;
 
 import uz.atmos.gaf.ApiType;
+import uz.atmos.gaf.client.configuration.GafClientConfiguration;
 
 import java.lang.annotation.*;
 
@@ -12,6 +13,7 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.SOURCE)
 @Documented
 public @interface GafClient {
-    ApiType[] types() default {};
+    ApiType[] types() default {ApiType.THRIFT, ApiType.REST, ApiType.GRPC};
     String url();
+    Class<? extends GafClientConfiguration> configuration() default GafClientConfiguration.class;
 }

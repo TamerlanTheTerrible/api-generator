@@ -1,8 +1,9 @@
-package uz.atmos.gaf.client;
+package uz.atmos.gaf.client.source_generator;
 
 import com.google.auto.service.AutoService;
 import org.springframework.cloud.openfeign.FeignClient;
 import uz.atmos.gaf.ApiType;
+import uz.atmos.gaf.client.GafClient;
 
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
