@@ -18,14 +18,8 @@ import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import java.io.*;
 import java.util.*;
-
-/**
- * Created by Temurbek Ismoilov on 18/03/24.
- */
 
 public class RestClientFreeMakerGenerator implements ClientGenerator {
 
@@ -33,14 +27,13 @@ public class RestClientFreeMakerGenerator implements ClientGenerator {
     private final Configuration cfg;
 
     public RestClientFreeMakerGenerator() {
-        cfg = new Configuration(Configuration.VERSION_2_3_32);
+        cfg = new Configuration(Configuration.VERSION_2_3_31);
         cfg.setClassForTemplateLoading(getClass(), "/");
     }
 
     @Override
     public void generate(Element element, ProcessingEnvironment processingEnv, GafClient gafClientAnnotation) {
         generateSourceCode(element, processingEnv, gafClientAnnotation);
-        // generateFeignConfig(element, processingEnv, gafClientAnnotation);
     }
 
     private void generateSourceCode(Element element, ProcessingEnvironment processingEnv, GafClient gafClientAnnotation) {
@@ -56,12 +49,14 @@ public class RestClientFreeMakerGenerator implements ClientGenerator {
             Template template = cfg.getTemplate("rest_client_template.ftl");
             StringWriter writer = new StringWriter();
             Map<String, Object> input = new HashMap<>();
+            final List<Map<String, Object>> methodStrings = generateMethodStrings(element);
             input.put("packageName", packageName);
             input.put("imports", generateImports());
             input.put("className", className);
             input.put("apiName", apiName);
             input.put("serviceClassName", serviceClassName);
-            input.put("methods", generateMethodStrings(element));
+            input.put("methods", methodStrings);
+            input.put("baseUrl", getUrlValue(element));
 
             template.process(input, writer);
 
@@ -74,8 +69,8 @@ public class RestClientFreeMakerGenerator implements ClientGenerator {
         }
     }
 
-    private List<String> generateMethodStrings(Element element) {
-        List<String> methodStrings = new ArrayList<>();
+    private List<Map<String, Object>> generateMethodStrings(Element element) {
+        List<Map<String, Object>> methodStrings = new ArrayList<>();
         // handle methods
         final List<? extends Element> methods = element.getEnclosedElements().stream()
                 .filter(e -> ElementKind.METHOD.equals(e.getKind()))
@@ -85,47 +80,46 @@ public class RestClientFreeMakerGenerator implements ClientGenerator {
             ExecutableElement method = (ExecutableElement) methodElement;
             String parameters = processParams(method);
             String returnType = processType(method);
-            String methodString = """
-                    @Override
-                    @%sMapping("%s")
-                    %s %s(%s);
-                    """.formatted(
-                    getRequestMethod(methodElement),
-                    getUrlValue(methodElement),
-                    returnType,
-                    method.getSimpleName(),
-                    parameters);
-            methodStrings.add(methodString);
+            Map<String, Object> methodMap = new HashMap<>();
+            methodMap.put("requestMethod", getRequestMethod(methodElement));
+            methodMap.put("urlValue", getUrlValue(methodElement));
+            methodMap.put("returnType", returnType);
+            methodMap.put("methodName", method.getSimpleName().toString());
+            methodMap.put("parameters", parameters);
+            methodStrings.add(methodMap);
         }
         return methodStrings;
     }
 
-    // Other methods remain unchanged
-
-    private String generateImports() {
-        StringBuilder sb = new StringBuilder();
-        for (String pack : packages) {
-            sb.append("import ").append(pack).append(";\n");
-        }
-        return sb.toString();
-    }
-
     private String getRequestMethod(Element methodElement) {
-        StringBuilder sb = new StringBuilder();
-        for(String pack: packages) {
-            sb.append("import ").append(pack).append(";\n");
-        }
-        return sb.toString();
-    }
-
-    private String getUrlValue(Element methodElement) {
         GafMethod gafMethodAnnotation = methodElement.getAnnotation(GafMethod.class);
         if (gafMethodAnnotation == null) {
-            return "";
+            return "Post";
         }
 
-        final String urlValue = gafMethodAnnotation.value();
-        return urlValue != null ? urlValue : "";
+        final RequestMethod requestMethod = gafMethodAnnotation.method();
+        return switch (requestMethod) {
+            case POST -> "Post";
+            case GET -> "Get";
+            case DELETE -> "Delete";
+            case PATCH -> "Patch";
+            case HEAD -> "Head";
+            case PUT -> "Put";
+            case OPTIONS -> "Options";
+            case TRACE -> "Trace";
+            default -> "Post";
+        };
+    }
+
+    private String processParams(ExecutableElement method) {
+        List<String> paramStrings = new ArrayList<>();
+        for (VariableElement parameter : method.getParameters()) {
+            TypeMirror parameterType = parameter.asType();
+            String paramString = processType(parameterType, new StringBuilder());
+            paramStrings.add(paramString + " " + parameter.getSimpleName().toString());
+        }
+        // Join parameter strings with comma
+        return String.join(", ", paramStrings);
     }
 
     private String processType(ExecutableElement method) {
@@ -133,14 +127,14 @@ public class RestClientFreeMakerGenerator implements ClientGenerator {
 
     }
 
-    private String processType(TypeMirror returnType, StringBuilder sb) {
+    private String processType(TypeMirror type, StringBuilder sb) {
         // append type name
-        final TypeKind kind = returnType.getKind();
-        String className = getClassName(returnType);
+        final TypeKind kind = type.getKind();
+        String className = getClassName(type);
         sb.append(className);
         // if type is declared continue processing
         if (!kind.isPrimitive() && kind != TypeKind.VOID) {
-            DeclaredType declaredType = (DeclaredType) returnType;
+            DeclaredType declaredType = (DeclaredType) type;
             if(!declaredType.getTypeArguments().isEmpty()) {
                 final List<? extends TypeMirror> typeArguments = declaredType.getTypeArguments();
                 for(int i=0; i<typeArguments.size(); i++) {
@@ -153,25 +147,6 @@ public class RestClientFreeMakerGenerator implements ClientGenerator {
             }
         }
         return sb.toString();
-    }
-
-    private String processParams(ExecutableElement method) {
-        final List<? extends VariableElement> parameters = method.getParameters();
-        if(parameters.isEmpty()) {
-            return "";
-        } else if (parameters.size() == 1) {
-            final VariableElement variable = parameters.get(0);
-            return processParam(variable);
-        } else {
-            StringBuilder sb = new StringBuilder();
-            for(int i=0; i<parameters.size(); i++) {
-                sb.append(processParam(parameters.get(i)));
-                if(i < parameters.size() - 1) {
-                    sb.append(", ");
-                }
-            }
-            return sb.toString();
-        }
     }
 
     private String processParam(VariableElement variable) {
@@ -208,6 +183,29 @@ public class RestClientFreeMakerGenerator implements ClientGenerator {
             addToPackageSet(returnType.toString(), className);
             return className;
         }
+    }
+
+    private String generateImports() {
+        System.out.println("PACKAGES: " + packages);
+        StringBuilder sb = new StringBuilder();
+        for (String pack : packages) {
+            sb.append("import ").append(pack).append(";\n");
+        }
+        return sb.toString();
+    }
+
+//    private String getRequestMethod(Element methodElement) {
+//        // Implementation omitted for brevity
+//    }
+//
+    private String getUrlValue(Element methodElement) {
+        GafMethod gafMethodAnnotation = methodElement.getAnnotation(GafMethod.class);
+        if (gafMethodAnnotation == null) {
+            return "";
+        }
+
+        final String urlValue = gafMethodAnnotation.value();
+        return urlValue != null ? urlValue : "";
     }
 
     private void addToPackageSet(String fullClassName, String className) {

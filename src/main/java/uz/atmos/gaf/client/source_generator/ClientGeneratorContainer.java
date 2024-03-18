@@ -2,7 +2,7 @@ package uz.atmos.gaf.client.source_generator;
 
 import uz.atmos.gaf.ApiType;
 import uz.atmos.gaf.client.source_generator.impl.GrpcClientGenerator;
-import uz.atmos.gaf.client.source_generator.impl.RestClientGenerator;
+import uz.atmos.gaf.client.source_generator.impl.RestClientFreeMakerGenerator;
 import uz.atmos.gaf.client.source_generator.impl.ThriftClientGenerator;
 
 import java.util.EnumMap;
@@ -17,7 +17,7 @@ public final class ClientGeneratorContainer {
 
     static {
         container.put(ApiType.GRPC, new GrpcClientGenerator());
-        container.put(ApiType.REST, new RestClientGenerator());
+        container.put(ApiType.REST, new RestClientFreeMakerGenerator());
         container.put(ApiType.THRIFT, new ThriftClientGenerator());
     }
 
