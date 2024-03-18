@@ -1,9 +1,9 @@
 package uz.atmos.gaf.client.source_generator;
 
 import uz.atmos.gaf.ApiType;
-import uz.atmos.gaf.client.source_generator.impl.GrpcClientGenerator;
+import uz.atmos.gaf.client.source_generator.impl.GrpcClientFMTemplateGenerator;
 import uz.atmos.gaf.client.source_generator.impl.RestClientFMTemplateGenerator;
-import uz.atmos.gaf.client.source_generator.impl.ThriftClientGenerator;
+import uz.atmos.gaf.client.source_generator.impl.ThriftClientTMTemplateGenerator;
 
 import java.util.EnumMap;
 import java.util.Map;
@@ -16,9 +16,9 @@ public final class ClientGeneratorContainer {
     public static final Map<ApiType, ClientGenerator> container = new EnumMap<>(ApiType.class);
 
     static {
-        container.put(ApiType.GRPC, new GrpcClientGenerator());
+        container.put(ApiType.GRPC, new GrpcClientFMTemplateGenerator());
         container.put(ApiType.REST, new RestClientFMTemplateGenerator());
-        container.put(ApiType.THRIFT, new ThriftClientGenerator());
+        container.put(ApiType.THRIFT, new ThriftClientTMTemplateGenerator());
     }
 
     public static ClientGenerator get(ApiType type) {
