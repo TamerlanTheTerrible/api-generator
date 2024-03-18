@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import uz.atmos.gaf.client.GafClient;
 import uz.atmos.gaf.client.GafMethod;
 import uz.atmos.gaf.client.RequestHeader;
+import uz.atmos.gaf.client.configuration.GafClientConfiguration;
 import uz.atmos.gaf.client.source_generator.ClientGenerator;
 import uz.atmos.gaf.exception.GafException;
 
@@ -16,9 +17,12 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.MirroredTypeException;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
-import java.io.*;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.*;
 
 public class RestClientFreeMakerGenerator implements ClientGenerator {
@@ -34,6 +38,57 @@ public class RestClientFreeMakerGenerator implements ClientGenerator {
     @Override
     public void generate(Element element, ProcessingEnvironment processingEnv, GafClient gafClientAnnotation) {
         generateSourceCode(element, processingEnv, gafClientAnnotation);
+        generateFeignConfig(element, processingEnv, gafClientAnnotation);
+    }
+
+    private void generateFeignConfig(Element element, ProcessingEnvironment processingEnv, GafClient gafClientAnnotation) {
+        String serviceClassName = element.getSimpleName().toString();
+        String className = serviceClassName.replace("Service", "");
+        String packageName = element.getEnclosingElement().toString();
+        String apiName = className + "FeignConfig";
+        String feignClientClassName = className + "FeignClient";
+        String builderFullName = packageName + "." + apiName;
+
+        String url = gafClientAnnotation.url();
+        if (url == null) {
+            url = "";
+        }
+
+        try {
+            Template template = cfg.getTemplate("feign_config_template.ftl");
+            StringWriter writer = new StringWriter();
+            Map<String, Object> input = new HashMap<>();
+            input.put("packageName", packageName);
+            input.put("apiName", apiName);
+            input.put("feignClientClassName", feignClientClassName);
+            input.put("feignClientVariableName", feignClientClassName.substring(0,1).toLowerCase() + feignClientClassName.substring(1));
+            input.put("url", url);
+            input.put("configVariableName", getConfigClassString(gafClientAnnotation));
+
+            template.process(input, writer);
+
+            try (PrintWriter fileWriter = new PrintWriter(processingEnv.getFiler().createSourceFile(builderFullName).openWriter())) {
+                fileWriter.println(writer.toString());
+            }
+        } catch (IOException | TemplateException e) {
+            System.out.println("Feign config generation error: " + e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    private String getConfigClassString(GafClient gafClientAnnotation) {
+        String configClassString = "new GafClientConfiguration(){}";
+        Class<? extends GafClientConfiguration> clazz = null;
+        try {
+            clazz = gafClientAnnotation.configuration();
+        } catch (MirroredTypeException e) {
+            TypeMirror configurationTypeMirror = e.getTypeMirror();
+            String configClassName = getClassName(configurationTypeMirror);
+            if(!configClassName.equals("GafClientConfiguration")) {
+                configClassString = "new " + configClassName + "()";
+            }
+        }
+        return configClassString;
     }
 
     private void generateSourceCode(Element element, ProcessingEnvironment processingEnv, GafClient gafClientAnnotation) {
@@ -46,7 +101,7 @@ public class RestClientFreeMakerGenerator implements ClientGenerator {
         String builderFullName = packageName + "." + apiName;
 
         try {
-            Template template = cfg.getTemplate("rest_client_template.ftl");
+            Template template = cfg.getTemplate("feign_client_template.ftl");
             StringWriter writer = new StringWriter();
             Map<String, Object> input = new HashMap<>();
             final List<Map<String, Object>> methodStrings = generateMethodStrings(element);
@@ -114,12 +169,32 @@ public class RestClientFreeMakerGenerator implements ClientGenerator {
     private String processParams(ExecutableElement method) {
         List<String> paramStrings = new ArrayList<>();
         for (VariableElement parameter : method.getParameters()) {
-            TypeMirror parameterType = parameter.asType();
-            String paramString = processType(parameterType, new StringBuilder());
-            paramStrings.add(paramString + " " + parameter.getSimpleName().toString());
+            paramStrings.add(processParam(parameter));
         }
         // Join parameter strings with comma
         return String.join(", ", paramStrings);
+    }
+
+    private String processParam(VariableElement variable) {
+        String className = processType(variable.asType(), new StringBuilder());
+        String varName = variable.getSimpleName().toString();
+        //if parameter has RequestHeader annotate it with spring's RequestHeader, else annotate is as RequestBody
+        if(variable.getAnnotation(RequestHeader.class) != null ) {
+            final String headerName = variable.getAnnotation(RequestHeader.class).value();
+            if(headerName == null) {
+                throw new GafException("Request header name is null");
+            }
+
+            if(!Objects.equals(variable.asType().toString(), "java.lang.String")) {
+                throw new GafException("Request header should be type of string");
+            }
+
+            return """
+                    @RequestHeader(value="%s") %s %s""".formatted(headerName, className, varName);
+        } else {
+            return """
+                    @RequestBody %s %s""".formatted(className, varName);
+        }
     }
 
     private String processType(ExecutableElement method) {
@@ -149,28 +224,6 @@ public class RestClientFreeMakerGenerator implements ClientGenerator {
         return sb.toString();
     }
 
-    private String processParam(VariableElement variable) {
-        String className = processType(variable.asType(), new StringBuilder());
-        String varName = variable.getSimpleName().toString();
-        //if parameter has RequestHeader annotate it with spring's RequestHeader, else annotate is as RequestBody
-        if(variable.getAnnotation(RequestHeader.class) != null ) {
-            final String headerName = variable.getAnnotation(RequestHeader.class).value();
-            if(headerName == null) {
-                throw new GafException("Request header name is null");
-            }
-
-            if(!Objects.equals(variable.asType().toString(), "java.lang.String")) {
-                throw new GafException("Request header should be type of string");
-            }
-
-            return """
-                    @RequestHeader(value="%s") %s %s""".formatted(headerName, className, varName);
-        } else {
-            return """
-                    @RequestBody %s %s""".formatted(className, varName);
-        }
-    }
-
     private String getClassName(TypeMirror returnType) {
         final TypeKind kind = returnType.getKind();
         if (kind.isPrimitive()) {
@@ -194,10 +247,6 @@ public class RestClientFreeMakerGenerator implements ClientGenerator {
         return sb.toString();
     }
 
-//    private String getRequestMethod(Element methodElement) {
-//        // Implementation omitted for brevity
-//    }
-//
     private String getUrlValue(Element methodElement) {
         GafMethod gafMethodAnnotation = methodElement.getAnnotation(GafMethod.class);
         if (gafMethodAnnotation == null) {
