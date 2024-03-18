@@ -25,7 +25,7 @@ import java.util.*;
  * Created by Temurbek Ismoilov on 12/03/24.
  */
 
-public class RestClientGeneratorGenerator implements ClientGenerator {
+public class RestClientGenerator implements ClientGenerator {
 
     private final Set<String> packages = new HashSet<>();
 
@@ -137,12 +137,12 @@ public class RestClientGeneratorGenerator implements ClientGenerator {
                             return config.decoder() != null ? config.decoder() : new JacksonDecoder();
                         }    
                     }""".formatted(packageName,
-                    apiName,
-                    feignClientClassName,
-                    feignClientClassName.substring(0,1).toLowerCase() + feignClientClassName.substring(1),
-                    feignClientClassName,
-                    url,
-                    getConfigClassString(gafClientAnnotation)
+                            apiName,
+                            feignClientClassName,
+                            feignClientClassName.substring(0,1).toLowerCase() + feignClientClassName.substring(1),
+                            feignClientClassName,
+                            url,
+                            getConfigClassString(gafClientAnnotation)
                     )
             );
         } catch (IOException e) {
@@ -206,7 +206,7 @@ public class RestClientGeneratorGenerator implements ClientGenerator {
                             @%sMapping("%s")
                             %s %s(%s);
                         """.formatted(
-                                getRequestMethod(methodElement),
+                        getRequestMethod(methodElement),
                         getUrlValue(methodElement),
                         returnType,
                         method.getSimpleName(),
@@ -229,13 +229,13 @@ public class RestClientGeneratorGenerator implements ClientGenerator {
                     }
                     """.formatted(
                             packageName,
-                    generateImports(),
-                    className.toLowerCase() + "-feign-client",
-                    gafClientAnnotation.url(),
+                            generateImports(),
+                            className.toLowerCase() + "-feign-client",
+                            gafClientAnnotation.url(),
 //                    getConfigClassString(gafClientAnnotation),
-                    apiName,
-                    serviceClassName,
-                    String.join("\n", methodStrings)
+                            apiName,
+                            serviceClassName,
+                            String.join("\n", methodStrings)
                     )
             );
         } catch (IOException e) {
