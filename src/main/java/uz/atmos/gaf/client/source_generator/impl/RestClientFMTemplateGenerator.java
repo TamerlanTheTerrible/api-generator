@@ -55,7 +55,7 @@ public class RestClientFMTemplateGenerator implements ClientGenerator {
         }
 
         try(PrintWriter fileWriter = new PrintWriter(processingEnv.getFiler().createSourceFile(builderFullName).openWriter())) {
-            Template template = cfg.getTemplate("feign_config_template.ftl");
+            //generate input
             Map<String, Object> input = new HashMap<>();
             input.put("packageName", packageName);
             input.put("apiName", apiName);
@@ -63,7 +63,8 @@ public class RestClientFMTemplateGenerator implements ClientGenerator {
             input.put("feignClientVariableName", feignClientClassName.substring(0,1).toLowerCase() + feignClientClassName.substring(1));
             input.put("url", url);
             input.put("configVariableName", getConfigClassString(gafClientAnnotation));
-
+            // process the template
+            Template template = cfg.getTemplate("feign_config_template.ftl");
             template.process(input, fileWriter);
         } catch (IOException | TemplateException e) {
             System.out.println("Feign config generation error: " + e);
