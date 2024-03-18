@@ -25,12 +25,12 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.*;
 
-public class RestClientFreeMakerGenerator implements ClientGenerator {
+public class RestClientFMTemplateGenerator implements ClientGenerator {
 
     private final Set<String> packages = new HashSet<>();
     private final Configuration cfg;
 
-    public RestClientFreeMakerGenerator() {
+    public RestClientFMTemplateGenerator() {
         cfg = new Configuration(Configuration.VERSION_2_3_31);
         cfg.setClassForTemplateLoading(getClass(), "/");
     }
@@ -54,9 +54,8 @@ public class RestClientFreeMakerGenerator implements ClientGenerator {
             url = "";
         }
 
-        try {
+        try(PrintWriter fileWriter = new PrintWriter(processingEnv.getFiler().createSourceFile(builderFullName).openWriter())) {
             Template template = cfg.getTemplate("feign_config_template.ftl");
-            StringWriter writer = new StringWriter();
             Map<String, Object> input = new HashMap<>();
             input.put("packageName", packageName);
             input.put("apiName", apiName);
@@ -65,11 +64,7 @@ public class RestClientFreeMakerGenerator implements ClientGenerator {
             input.put("url", url);
             input.put("configVariableName", getConfigClassString(gafClientAnnotation));
 
-            template.process(input, writer);
-
-            try (PrintWriter fileWriter = new PrintWriter(processingEnv.getFiler().createSourceFile(builderFullName).openWriter())) {
-                fileWriter.println(writer.toString());
-            }
+            template.process(input, fileWriter);
         } catch (IOException | TemplateException e) {
             System.out.println("Feign config generation error: " + e);
             throw new RuntimeException(e);
