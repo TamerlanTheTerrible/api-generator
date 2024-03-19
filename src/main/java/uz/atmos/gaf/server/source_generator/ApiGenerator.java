@@ -1,4 +1,6 @@
-package uz.atmos.gaf.server;
+package uz.atmos.gaf.server.source_generator;
+
+import uz.atmos.gaf.server.GafServer;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
@@ -8,5 +10,5 @@ import javax.lang.model.element.Element;
  */
 
 public interface ApiGenerator {
-    void generate(Element element, ProcessingEnvironment processingEnv);
+    void generate(Element element, ProcessingEnvironment processingEnv, GafServer gafServerAnnotation);
 }

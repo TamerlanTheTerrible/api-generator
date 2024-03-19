@@ -1,7 +1,8 @@
-package uz.atmos.gaf.server;
+package uz.atmos.gaf.server.source_generator;
 
 import com.google.auto.service.AutoService;
 import uz.atmos.gaf.ApiType;
+import uz.atmos.gaf.server.GafServer;
 
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
@@ -32,7 +33,7 @@ public class GafServerProcessor extends AbstractProcessor {
                 }
 
                 for (ApiType type : typeSet) {
-                    ApiGeneratorContainer.get(type).generate(element, processingEnv);
+                    ApiGeneratorContainer.get(type).generate(element, processingEnv, gafServerAnnotation);
                 }
             }
         }

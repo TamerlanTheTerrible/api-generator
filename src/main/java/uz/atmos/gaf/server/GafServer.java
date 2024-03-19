@@ -15,4 +15,5 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.SOURCE)
 public @interface GafServer {
     ApiType[] types() default {};
+    String url() default "";
 }
