@@ -55,7 +55,7 @@ public class RestApiFMTemplateGenerator implements ApiGenerator {
             input.put("imports", generateImports(packages));
             input.put("apiName", apiName);
             input.put("className", className);
-            input.put("baseUrl", getUrlValue(gafServerAnnotation, className.toLowerCase()));
+            input.put("baseUrl", getUrl(gafServerAnnotation, className.toLowerCase()));
             input.put("serviceClassName", serviceClassName);
             input.put("methods", methodStrings);
 
@@ -77,7 +77,7 @@ public class RestApiFMTemplateGenerator implements ApiGenerator {
             ExecutableElement method = (ExecutableElement) methodElement;
             Map<String, Object> methodMap = new HashMap<>();
             methodMap.put("requestMethod", ElementUtil.getRequestMethod(methodElement));
-            methodMap.put("urlValue", getUrlValue(methodElement.getAnnotation(GafMethod.class), methodElement.getSimpleName().toString()));
+            methodMap.put("urlValue", getUrl(methodElement.getAnnotation(GafMethod.class), methodElement.getSimpleName().toString()));
             methodMap.put("returnType", processType(method, packages));
             methodMap.put("methodName", method.getSimpleName().toString());
             methodMap.put("controllerParams", processParams(method, false));

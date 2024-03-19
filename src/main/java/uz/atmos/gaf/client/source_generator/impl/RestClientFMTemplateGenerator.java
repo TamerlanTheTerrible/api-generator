@@ -3,10 +3,8 @@ package uz.atmos.gaf.client.source_generator.impl;
 import freemarker.template.Configuration;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
-import uz.atmos.gaf.ElementUtil;
 import uz.atmos.gaf.RequestParam;
 import uz.atmos.gaf.client.GafClient;
-import uz.atmos.gaf.client.GafMethod;
 import uz.atmos.gaf.RequestHeader;
 import uz.atmos.gaf.client.configuration.GafClientConfiguration;
 import uz.atmos.gaf.client.source_generator.ClientGenerator;
@@ -110,7 +108,7 @@ public class RestClientFMTemplateGenerator implements ClientGenerator {
             input.put("apiName", apiName);
             input.put("serviceClassName", serviceClassName);
             input.put("methods", methodStrings);
-            input.put("baseUrl", getUrlValue(element.getAnnotation(GafClient.class), "/" + className.toLowerCase()));
+            input.put("baseUrl", getUrl(element.getAnnotation(GafClient.class), "/" + className.toLowerCase()));
 
             template.process(input, writer);
         } catch (IOException | TemplateException e) {
@@ -128,37 +126,28 @@ public class RestClientFMTemplateGenerator implements ClientGenerator {
 
         for (Element methodElement : methods) {
             ExecutableElement method = (ExecutableElement) methodElement;
-            String urlValue = getUrlValue(methodElement.getAnnotation(GafMethod.class), methodElement.getSimpleName().toString());
             Map<String, Object> methodMap = new HashMap<>();
-
-            methodMap.put("requestMethod", ElementUtil.getRequestMethod(methodElement));
-            methodMap.put("urlValue", urlValue);
+            methodMap.put("requestMethod", getRequestMethod(methodElement));
+            methodMap.put("parameters", processParams(method));
+            methodMap.put("urlValue", getUrl(method));
             methodMap.put("returnType", processType(method, packages));
             methodMap.put("methodName", method.getSimpleName().toString());
-            methodMap.put("parameters", processParams(method, urlValue));
             methodMapList.add(methodMap);
         }
         return methodMapList;
     }
 
-    private String processParams(ExecutableElement method, String urlValue) {
+    private String processParams(ExecutableElement method) {
         List<String> paramStrings = new ArrayList<>();
-        Set<String> paramNames = getParamNames(urlValue);
+
         for (VariableElement parameter : method.getParameters()) {
-            paramStrings.add(processParam(parameter, paramNames));
-        }
-        //check if all request params are provided
-        if(!paramNames.isEmpty()) {
-            final String errorMsg = "Request parameters not found : " + Arrays.toString(paramNames.toArray());
-            System.err.println(errorMsg);
-            throw new GafException(errorMsg);
+            paramStrings.add(processParam(parameter));
         }
         // Join parameter strings with comma
         return String.join(", ", paramStrings);
     }
 
-
-    private String processParam(VariableElement variable, Set<String> paramNames) {
+    private String processParam(VariableElement variable) {
         String className = processType(variable.asType(), new StringBuilder(), packages);
         String varName = variable.getSimpleName().toString();
         //if parameter has RequestHeader annotate it with spring's RequestHeader, else annotate is as RequestBody
@@ -175,13 +164,6 @@ public class RestClientFMTemplateGenerator implements ClientGenerator {
             return """
                     @RequestHeader(value="%s") %s %s""".formatted(headerName, className, varName);
         } else if(variable.getAnnotation(RequestParam.class) != null) {
-            //check if the param is in url
-            String requestParamAnnotation = variable.getAnnotation(RequestParam.class).value();
-            if(!paramNames.contains(varName) && !paramNames.contains(requestParamAnnotation)) {
-                System.err.println("Unknown request parameter: " + varName);
-                throw new GafException("Unknown request parameter: " + varName);
-            }
-            paramNames.remove(varName);
             return """
                     @Param(value="%s") %s %s""".formatted(varName, className, className);
         } else {
