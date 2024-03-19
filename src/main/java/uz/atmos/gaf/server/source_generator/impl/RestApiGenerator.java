@@ -1,6 +1,7 @@
-package uz.atmos.gaf.server.impl;
+package uz.atmos.gaf.server.source_generator.impl;
 
-import uz.atmos.gaf.server.ApiGenerator;
+import uz.atmos.gaf.server.GafServer;
+import uz.atmos.gaf.server.source_generator.ApiGenerator;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
@@ -17,7 +18,7 @@ import java.util.List;
 
 public class RestApiGenerator implements ApiGenerator {
     @Override
-    public void generate(Element element, ProcessingEnvironment processingEnv) {
+    public void generate(Element element, ProcessingEnvironment processingEnv, GafServer gafServerAnnotation) {
         System.out.println("Invoking " + this.getClass().getSimpleName() + " for " + element);
 
         String serviceClassName = element.getSimpleName().toString();

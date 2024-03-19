@@ -1,4 +1,4 @@
-package uz.atmos.gaf.client;
+package uz.atmos.gaf;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
