@@ -10,8 +10,10 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -48,6 +50,13 @@ public class ElementUtil {
     public static String processType(ExecutableElement method, Set<String> packages) {
         return processType(method.getReturnType(), new StringBuilder(), packages);
 
+    }
+
+    public static Set<String> getParamNames(String urlValue) {
+        return Arrays.stream(urlValue.split("/"))
+                .filter(p -> p.startsWith("{") && p.endsWith("}"))
+                .map(p -> p.substring(1, p.indexOf("}")))
+                .collect(Collectors.toSet());
     }
 
     public static String processType(TypeMirror type, StringBuilder sb, Set<String> packages) {
