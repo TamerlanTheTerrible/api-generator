@@ -55,7 +55,7 @@ public class RestApiFMTemplateGenerator implements ApiGenerator {
             input.put("imports", generateImports(packages));
             input.put("apiName", apiName);
             input.put("className", className);
-            input.put("baseUrl", getBaseUrl(gafServerAnnotation, className.toLowerCase()));
+            input.put("baseUrl", getUrlValue(gafServerAnnotation, className.toLowerCase()));
             input.put("serviceClassName", serviceClassName);
             input.put("methods", methodStrings);
 
@@ -88,14 +88,6 @@ public class RestApiFMTemplateGenerator implements ApiGenerator {
         return methodMapList;
     }
 
-    private String getBaseUrl(GafServer gafServerAnnotation, String defaultUrl) {
-        String url = gafServerAnnotation.url();
-        if (url == null || url.isEmpty()) {
-            url = "/" + defaultUrl.toLowerCase();
-        }
-        return url;
-    }
-
     private String processParams(ExecutableElement method, boolean isServiceParam) {
         List<String> paramStrings = new ArrayList<>();
         for (VariableElement parameter : method.getParameters()) {
@@ -104,7 +96,6 @@ public class RestApiFMTemplateGenerator implements ApiGenerator {
         // Join parameter strings with comma
         return String.join(", ", paramStrings);
     }
-
 
     private String processParam(VariableElement variable, boolean isServiceParam) {
         String className = processType(variable.asType(), new StringBuilder(), packages);

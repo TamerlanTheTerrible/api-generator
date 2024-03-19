@@ -4,6 +4,7 @@ import freemarker.template.Configuration;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
 import uz.atmos.gaf.ElementUtil;
+import uz.atmos.gaf.RequestParam;
 import uz.atmos.gaf.client.GafClient;
 import uz.atmos.gaf.client.GafMethod;
 import uz.atmos.gaf.RequestHeader;
@@ -20,7 +21,6 @@ import javax.lang.model.type.MirroredTypeException;
 import javax.lang.model.type.TypeMirror;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.util.*;
 
 import static uz.atmos.gaf.ElementUtil.*;
@@ -70,7 +70,7 @@ public class RestClientFMTemplateGenerator implements ClientGenerator {
             Template template = cfg.getTemplate("feign_config_template.ftl");
             template.process(input, fileWriter);
         } catch (IOException | TemplateException e) {
-            System.out.println("Feign config generation error: " + e);
+            System.err.println("Feign config generation error: " + e);
             throw new RuntimeException(e);
         }
     }
@@ -99,9 +99,8 @@ public class RestClientFMTemplateGenerator implements ClientGenerator {
         String apiName = className + "FeignClient";
         String builderFullName = packageName + "." + apiName;
 
-        try (PrintWriter fileWriter = new PrintWriter(processingEnv.getFiler().createSourceFile(builderFullName).openWriter())) {
+        try (PrintWriter writer = new PrintWriter(processingEnv.getFiler().createSourceFile(builderFullName).openWriter())) {
             Template template = cfg.getTemplate("feign_client_template.ftl");
-            StringWriter writer = new StringWriter();
             Map<String, Object> input = new HashMap<>();
             final List<Map<String, Object>> methodStrings = generateMethodStrings(element);
 
@@ -129,34 +128,41 @@ public class RestClientFMTemplateGenerator implements ClientGenerator {
 
         for (Element methodElement : methods) {
             ExecutableElement method = (ExecutableElement) methodElement;
-            String parameters = processParams(method);
-            String returnType = processType(method, packages);
+            String urlValue = getUrlValue(methodElement.getAnnotation(GafMethod.class), methodElement.getSimpleName().toString());
             Map<String, Object> methodMap = new HashMap<>();
 
             methodMap.put("requestMethod", ElementUtil.getRequestMethod(methodElement));
-            methodMap.put("urlValue", getUrlValue(methodElement.getAnnotation(GafMethod.class), methodElement.getSimpleName().toString()));
-            methodMap.put("returnType", returnType);
+            methodMap.put("urlValue", urlValue);
+            methodMap.put("returnType", processType(method, packages));
             methodMap.put("methodName", method.getSimpleName().toString());
-            methodMap.put("parameters", parameters);
+            methodMap.put("parameters", processParams(method, urlValue));
             methodMapList.add(methodMap);
         }
         return methodMapList;
     }
 
-    private String processParams(ExecutableElement method) {
+    private String processParams(ExecutableElement method, String urlValue) {
         List<String> paramStrings = new ArrayList<>();
+        Set<String> paramNames = getParamNames(urlValue);
         for (VariableElement parameter : method.getParameters()) {
-            paramStrings.add(processParam(parameter));
+            paramStrings.add(processParam(parameter, paramNames));
+        }
+        //check if all request params are provided
+        if(!paramNames.isEmpty()) {
+            final String errorMsg = "Request parameters not found : " + Arrays.toString(paramNames.toArray());
+            System.err.println(errorMsg);
+            throw new GafException(errorMsg);
         }
         // Join parameter strings with comma
         return String.join(", ", paramStrings);
     }
 
-    private String processParam(VariableElement variable) {
+
+    private String processParam(VariableElement variable, Set<String> paramNames) {
         String className = processType(variable.asType(), new StringBuilder(), packages);
         String varName = variable.getSimpleName().toString();
         //if parameter has RequestHeader annotate it with spring's RequestHeader, else annotate is as RequestBody
-        if(variable.getAnnotation(RequestHeader.class) != null ) {
+        if(variable.getAnnotation(RequestHeader.class) != null) {
             final String headerName = variable.getAnnotation(RequestHeader.class).value();
             if(headerName == null) {
                 throw new GafException("Request header name is null");
@@ -168,6 +174,16 @@ public class RestClientFMTemplateGenerator implements ClientGenerator {
 
             return """
                     @RequestHeader(value="%s") %s %s""".formatted(headerName, className, varName);
+        } else if(variable.getAnnotation(RequestParam.class) != null) {
+            //check if the param is in url
+            String requestParamAnnotation = variable.getAnnotation(RequestParam.class).value();
+            if(!paramNames.contains(varName) && !paramNames.contains(requestParamAnnotation)) {
+                System.err.println("Unknown request parameter: " + varName);
+                throw new GafException("Unknown request parameter: " + varName);
+            }
+            paramNames.remove(varName);
+            return """
+                    @Param(value="%s") %s %s""".formatted(varName, className, className);
         } else {
             return """
                     @RequestBody %s %s""".formatted(className, varName);
