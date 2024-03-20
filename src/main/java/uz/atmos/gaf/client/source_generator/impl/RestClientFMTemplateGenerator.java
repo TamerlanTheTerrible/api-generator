@@ -167,7 +167,7 @@ public class RestClientFMTemplateGenerator implements ClientGenerator {
                     @RequestHeader(value="%s") %s %s""".formatted(headerName, className, varName);
         } else if(variable.getAnnotation(RequestParam.class) != null) {
             return """
-                    @Param(value="%s") %s %s""".formatted(varName, className, className);
+                    @RequestParam(value="%s") %s %s""".formatted(varName, className, varName);
         } else if(variable.getAnnotation(RequestParamMap.class) != null) {
             return """
                     @SpringQueryMap %s %s""".formatted(className, varName);
