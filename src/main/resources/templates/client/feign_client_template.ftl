@@ -6,6 +6,7 @@
 package ${packageName};
 
 import feign.*;
+import org.springframework.cloud.openfeign.SpringQueryMap;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 

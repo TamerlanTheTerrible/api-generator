@@ -3,7 +3,9 @@ package uz.atmos.gaf.client.source_generator.impl;
 import freemarker.template.Configuration;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
+import uz.atmos.gaf.PathVariable;
 import uz.atmos.gaf.RequestParam;
+import uz.atmos.gaf.RequestParamMap;
 import uz.atmos.gaf.client.GafClient;
 import uz.atmos.gaf.RequestHeader;
 import uz.atmos.gaf.client.configuration.GafClientConfiguration;
@@ -166,6 +168,12 @@ public class RestClientFMTemplateGenerator implements ClientGenerator {
         } else if(variable.getAnnotation(RequestParam.class) != null) {
             return """
                     @Param(value="%s") %s %s""".formatted(varName, className, className);
+        } else if(variable.getAnnotation(RequestParamMap.class) != null) {
+            return """
+                    @SpringQueryMap %s %s""".formatted(className, varName);
+        } else if(variable.getAnnotation(PathVariable.class) != null) {
+            return """
+                    @PathVariable(value="%s") %s %s""".formatted(varName, className, varName);
         } else {
             return """
                     @RequestBody %s %s""".formatted(className, varName);
