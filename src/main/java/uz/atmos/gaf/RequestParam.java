@@ -1,6 +1,4 @@
-package uz.atmos.gaf.server;
-
-import uz.atmos.gaf.ApiType;
+package uz.atmos.gaf;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -11,9 +9,8 @@ import java.lang.annotation.Target;
  * Created by Temurbek Ismoilov on 27/02/24.
  */
 
-@Target(ElementType.TYPE)
+@Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.SOURCE)
-public @interface GafServer {
-    ApiType[] types() default {};
-    String url() default "";
+public @interface RequestParam {
+    String value() default "";
 }
