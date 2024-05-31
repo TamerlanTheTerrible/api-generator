@@ -102,7 +102,7 @@ public class ElementUtil {
         if (gafMethodAnnotation == null) {
             url = "/" + methodElement.getSimpleName().toString();
         } else {
-            String urlValue = gafMethodAnnotation.value();
+            String urlValue = gafMethodAnnotation.url();
             url = urlValue != null ? urlValue : "/" + methodElement.getSimpleName().toString();
         }
 
@@ -137,64 +137,6 @@ public class ElementUtil {
         }
     }
 
-//    private static String setRequestParams(String url, List<? extends VariableElement> parameters) {
-//        StringBuilder sb = new StringBuilder(url);
-//        sb.append("?");
-//
-//        // Handle params with @RequestParam
-//        final List<? extends VariableElement> requestParams = parameters.stream()
-//                .filter(p -> p.getAnnotation(RequestParam.class) != null)
-//                .toList();
-//
-//        for (int i=0; i < requestParams.size(); i++) {
-//            final VariableElement param = requestParams.get(i);
-//            final String key = param.getAnnotation(RequestParam.class).value();
-//            sb
-//                    .append(key)
-//                    .append("=")
-//                    .append(param.getSimpleName().toString());
-//
-//            if(i < requestParams.size()-1) {
-//                sb.append("&");
-//            }
-//        }
-//
-//        // Handle params with @RequestParamMap
-//        final List<? extends VariableElement> requestParamMaps = parameters.stream()
-//                .filter(p -> p.getAnnotation(RequestParamMap.class) != null)
-//                .toList();
-//
-//        for (int i=0; i < requestParamMaps.size(); i++) {
-//            final VariableElement param = requestParams.get(i);
-//            if (param.getKind().isClass() && param.getSimpleName().toString().equals("Map")) {
-//                for (AnnotationMirror annotationMirror : param.getAnnotationMirrors()) {
-//                    Map<? extends ExecutableElement, ? extends AnnotationValue> elementValuesMap = annotationMirror.getElementValues();
-//                    for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry : elementValuesMap.entrySet()) {
-//                        String key = entry.getKey().getSimpleName().toString();
-//                        Object value = entry.getValue().getValue();
-//                        sb
-//                                .append(key)
-//                                .append("=")
-//                                .append(value);
-//                    }
-//                }
-//                if(i < requestParams.size()-1) {
-//                    sb.append("&");
-//                }
-//            } else {
-//                final String errorMsg = "Invalid value for request param map";
-//                System.err.println(errorMsg);
-//                throw new GafException(errorMsg);
-//            }
-//        }
-//
-//        String finalUrl = sb.toString();
-//        if (finalUrl.endsWith("?")) {
-//            finalUrl = finalUrl.substring(0, finalUrl.length()-1);
-//        }
-//        return finalUrl;
-//    }
-
     public static Set<String> getParamNames(String urlValue) {
         return Arrays.stream(urlValue.split("/"))
                 .filter(p -> p.startsWith("{") && p.endsWith("}"))
@@ -207,7 +149,7 @@ public class ElementUtil {
             return "/" + defaultUrl;
         }
 
-        final String urlValue = gafMethodAnnotation.value();
+        final String urlValue = gafMethodAnnotation.url();
         return urlValue != null ? urlValue : "/" + defaultUrl;
     }
 
