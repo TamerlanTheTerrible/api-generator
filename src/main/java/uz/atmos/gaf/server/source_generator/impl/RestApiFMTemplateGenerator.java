@@ -80,24 +80,25 @@ public class RestApiFMTemplateGenerator implements ApiGenerator {
             methodMap.put("urlValue", getUrl(methodElement.getAnnotation(GafMethod.class), methodElement.getSimpleName().toString()));
             methodMap.put("returnType", processType(method, packages));
             methodMap.put("methodName", method.getSimpleName().toString());
-            methodMap.put("controllerParams", processParams(method, false));
-            methodMap.put("serviceParams", processParams(method, true));
+            methodMap.put("controllerParams", processParams(methodElement, false));
+            methodMap.put("serviceParams", processParams(methodElement, true));
             methodMapList.add(methodMap);
         }
 
         return methodMapList;
     }
 
-    private String processParams(ExecutableElement method, boolean isServiceParam) {
+    private String processParams(Element methodElement, boolean isServiceParam) {
+        ExecutableElement method = (ExecutableElement) methodElement;
         List<String> paramStrings = new ArrayList<>();
         for (VariableElement parameter : method.getParameters()) {
-            paramStrings.add(processParam(parameter, isServiceParam));
+            paramStrings.add(processParam(methodElement, parameter, isServiceParam));
         }
         // Join parameter strings with comma
         return String.join(", ", paramStrings);
     }
 
-    private String processParam(VariableElement variable, boolean isServiceParam) {
+    private String processParam(Element methodElement, VariableElement variable, boolean isServiceParam) {
         String className = processType(variable.asType(), new StringBuilder(), packages);
         String varName = variable.getSimpleName().toString();
         //if parameter has RequestHeader annotate it with spring's RequestHeader, else annotate is as RequestBody
@@ -119,9 +120,23 @@ public class RestApiFMTemplateGenerator implements ApiGenerator {
         } else {
             return """
                     %s%s%s""".formatted(
-                            isServiceParam ? "" : "@RequestBody ",
+                    generateMethodAnnotation(methodElement, isServiceParam),
                     isServiceParam ? "" : className + " ",
                     varName);
+        }
+    }
+
+    private static String generateMethodAnnotation(Element methodElement, boolean isServiceParam) {
+        if(isServiceParam) {
+            return "";
+        }
+        final String url = getUrl(methodElement.getAnnotation(GafMethod.class), "");
+        boolean isPathVariable = url.contains("{") && url.contains("}");
+        if(!isPathVariable) {
+            return "@RequestBody ";
+        } else {
+            String pathVariable = url.substring(url.indexOf('{') + 1, url.indexOf('}'));
+            return "@PathVariable(\"" + pathVariable + "\")";
         }
     }
 }
