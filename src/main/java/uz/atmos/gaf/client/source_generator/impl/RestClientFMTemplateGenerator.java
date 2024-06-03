@@ -48,7 +48,7 @@ public class RestClientFMTemplateGenerator implements ClientGenerator {
         String serviceClassName = element.getSimpleName().toString();
         String className = serviceClassName.replace("Service", "");
         String packageName = element.getEnclosingElement().toString();
-        String apiName = className + "FeignConfig";
+        String apiName = className + "GafClientConfiguration";
         String feignClientClassName = className + "FeignClient";
         String builderFullName = packageName + "." + apiName;
 

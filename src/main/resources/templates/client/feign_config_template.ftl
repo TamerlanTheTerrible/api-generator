@@ -70,22 +70,25 @@ public class ${apiName} {
     }
 
     private ErrorDecoder getErrorDecoder(GafClientConfiguration config) {
-        return config.errorDecoder() != null ? config.errorDecoder() : new ErrorDecoder.Default();
+        return config.errorDecoder() != null ? (ErrorDecoder) config.errorDecoder() : new ErrorDecoder.Default();
     }
 
     private Encoder getEncoder(GafClientConfiguration config) {
-        return config.encoder() != null ? config.encoder() : new JacksonEncoder();
+        return config.encoder() != null ? (Encoder) config.encoder() : new JacksonEncoder();
     }
 
     private Decoder getDecoder(GafClientConfiguration config) {
-        return config.decoder() != null ? config.decoder() : new JacksonDecoder();
+        return config.decoder() != null ? (Decoder) config.decoder() : new JacksonDecoder();
     }
 
     private List<RequestInterceptor> getInterceptors(GafClientConfiguration config) {
-        List<RequestInterceptor> interceptors = new ArrayList<>(config.interceptors());
-            if(!config.headers().isEmpty()) {
-                interceptors.add(headerInterceptor(config));
-            }
+        List<RequestInterceptor> interceptors = new ArrayList<>();
+        for (Object obj: config.interceptors()) {
+            interceptors.add((RequestInterceptor) obj);
+        }
+        if(!config.headers().isEmpty()) {
+            interceptors.add(headerInterceptor(config));
+        }
         return interceptors;
     }
 }

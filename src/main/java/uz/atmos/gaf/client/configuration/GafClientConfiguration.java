@@ -22,19 +22,19 @@ public interface GafClientConfiguration {
         return DEFAULT_READ_TIMEOUT;
     }
 
-    default <E> E encoder() {
+    default Object encoder() {
         return null;
     }
 
-    default <D> D decoder() {
+    default Object decoder() {
         return null;
     }
 
-    default <R> R errorDecoder() {
+    default Object errorDecoder() {
         return null;
     }
 
-    default <I> List<I> interceptors() {
+    default List<Object> interceptors() {
         return Collections.emptyList();
     }
 
