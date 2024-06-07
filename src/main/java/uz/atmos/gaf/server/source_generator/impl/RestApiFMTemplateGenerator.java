@@ -33,7 +33,7 @@ public class RestApiFMTemplateGenerator implements ApiGenerator {
     public RestApiFMTemplateGenerator() {
         packages = new HashSet<>();
         cfg = new Configuration(Configuration.VERSION_2_3_31);
-        cfg.setClassForTemplateLoading(getClass(), "/templates/server/");
+        cfg.setClassForTemplateLoading(getClass(), "/templates/server/rest/");
     }
 
     @Override
@@ -48,7 +48,6 @@ public class RestApiFMTemplateGenerator implements ApiGenerator {
         final List<Map<String, Object>> methodStrings = generateMethods(element);
 
         try (PrintWriter writer = new PrintWriter(processingEnv.getFiler().createSourceFile(builderFullName).openWriter())){
-            Template template = cfg.getTemplate("controller_template.ftl");
             //generate input
             Map<String, Object> input = new HashMap<>();
             input.put("packageName", packageName);
@@ -58,7 +57,8 @@ public class RestApiFMTemplateGenerator implements ApiGenerator {
             input.put("baseUrl", getUrl(gafServerAnnotation, className.toLowerCase()));
             input.put("serviceClassName", serviceClassName);
             input.put("methods", methodStrings);
-
+            //process template
+            Template template = cfg.getTemplate("controller_template.ftl");
             template.process(input, writer);
         } catch (IOException | TemplateException e) {
             System.out.println(getClass().getSimpleName() + " error: " + e);
@@ -118,7 +118,7 @@ public class RestApiFMTemplateGenerator implements ApiGenerator {
                     isServiceParam ? "" : className + " ",
                     varName);
         } else {
-            return """
+            return """ 
                     %s%s%s""".formatted(
                     generateMethodAnnotation(methodElement, isServiceParam),
                     isServiceParam ? "" : className + " ",
