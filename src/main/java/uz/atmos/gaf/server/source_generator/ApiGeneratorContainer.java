@@ -2,6 +2,7 @@ package uz.atmos.gaf.server.source_generator;
 
 import uz.atmos.gaf.ApiType;
 import uz.atmos.gaf.server.source_generator.impl.GrpcApiGenerator;
+import uz.atmos.gaf.server.source_generator.impl.GrpcFMTemplateGenerator;
 import uz.atmos.gaf.server.source_generator.impl.RestApiFMTemplateGenerator;
 import uz.atmos.gaf.server.source_generator.impl.ThriftApiGenerator;
 
@@ -16,7 +17,7 @@ public final class ApiGeneratorContainer {
     public static final Map<ApiType, ApiGenerator> container = new EnumMap<>(ApiType.class);
 
     static {
-        container.put(ApiType.GRPC, new GrpcApiGenerator());
+        container.put(ApiType.GRPC, new GrpcFMTemplateGenerator());
         container.put(ApiType.REST, new RestApiFMTemplateGenerator());
         container.put(ApiType.THRIFT, new ThriftApiGenerator());
     }
