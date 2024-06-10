@@ -1,11 +1,10 @@
-package uz.atmos.gaf.server.source_generator.grpc;
+package uz.atmos.gaf.server.processor.grpc;
 
 import freemarker.template.Configuration;
 import freemarker.template.Template;
 import uz.atmos.gaf.ElementUtil;
 import uz.atmos.gaf.exception.GafException;
 import uz.atmos.gaf.server.GafServer;
-import uz.atmos.gaf.server.source_generator.ApiGenerator;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
@@ -24,12 +23,12 @@ import java.util.*;
  * Created by Temurbek Ismoilov on 05/06/24.
  */
 
-public class GrpcServerGenerator implements ApiGenerator {
+public class GrpcSchemeFreeMakerGenerator {
     private final Map<String, String> map;
     private final Set<String> convertedClassSet;
     private final Configuration cfg;
 
-    public GrpcServerGenerator() {
+    public GrpcSchemeFreeMakerGenerator() {
         this.convertedClassSet = new HashSet<>();
         // Java-Proto map
         this.map = new HashMap<>();
@@ -57,7 +56,6 @@ public class GrpcServerGenerator implements ApiGenerator {
         cfg.setClassForTemplateLoading(getClass(), "/templates/server/grpc/");
     }
 
-    @Override
     public void generate(Element element, ProcessingEnvironment processingEnv, GafServer gafServerAnnotation) {
         System.out.println("Generating grpc template for " + element);
 

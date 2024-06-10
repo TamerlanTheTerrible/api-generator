@@ -1,4 +1,4 @@
-package uz.atmos.gaf.server.source_generator.rest;
+package uz.atmos.gaf.server.processor.rest;
 
 import freemarker.template.Configuration;
 import freemarker.template.Template;
@@ -8,7 +8,7 @@ import uz.atmos.gaf.RequestHeader;
 import uz.atmos.gaf.client.GafMethod;
 import uz.atmos.gaf.exception.GafException;
 import uz.atmos.gaf.server.GafServer;
-import uz.atmos.gaf.server.source_generator.ApiGenerator;
+import uz.atmos.gaf.server.processor.ApiProcessor;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
@@ -25,19 +25,19 @@ import static uz.atmos.gaf.ElementUtil.*;
  * Created by Temurbek Ismoilov on 05/03/24.
  */
 
-public class RestServerGenerator implements ApiGenerator {
+public class RestServerProcessor implements ApiProcessor {
 
     private final Set<String> packages ;
     private final Configuration cfg;
 
-    public RestServerGenerator() {
+    public RestServerProcessor() {
         packages = new HashSet<>();
         cfg = new Configuration(Configuration.VERSION_2_3_31);
         cfg.setClassForTemplateLoading(getClass(), "/templates/server/rest/");
     }
 
     @Override
-    public void generate(Element element, ProcessingEnvironment processingEnv, GafServer gafServerAnnotation) {
+    public void process(Element element, ProcessingEnvironment processingEnv, GafServer gafServerAnnotation) {
         System.out.println("Generating rest api template for " + element);
 
         String serviceClassName = element.getSimpleName().toString();

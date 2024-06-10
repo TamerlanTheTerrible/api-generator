@@ -1,4 +1,4 @@
-package uz.atmos.gaf.client.source_generator.impl;
+package uz.atmos.gaf.client.processor.impl;
 
 import freemarker.template.Configuration;
 import freemarker.template.Template;
@@ -9,7 +9,7 @@ import uz.atmos.gaf.RequestParamMap;
 import uz.atmos.gaf.client.GafClient;
 import uz.atmos.gaf.RequestHeader;
 import uz.atmos.gaf.client.configuration.GafClientConfiguration;
-import uz.atmos.gaf.client.source_generator.ClientGenerator;
+import uz.atmos.gaf.client.processor.ClientProcessor;
 import uz.atmos.gaf.exception.GafException;
 
 import javax.annotation.processing.ProcessingEnvironment;
@@ -25,19 +25,19 @@ import java.util.*;
 
 import static uz.atmos.gaf.ElementUtil.*;
 
-public class RestClientFMTemplateGenerator implements ClientGenerator {
+public class RestClientProcessor implements ClientProcessor {
 
     private final Set<String> packages ;
     private final Configuration cfg;
 
-    public RestClientFMTemplateGenerator() {
+    public RestClientProcessor() {
         packages = new HashSet<>();
         cfg = new Configuration(Configuration.VERSION_2_3_31);
         cfg.setClassForTemplateLoading(getClass(), "/templates/client/");
     }
 
     @Override
-    public void generate(Element element, ProcessingEnvironment processingEnv, GafClient gafClientAnnotation) {
+    public void processor(Element element, ProcessingEnvironment processingEnv, GafClient gafClientAnnotation) {
         generateSourceCode(element, processingEnv, gafClientAnnotation);
         generateFeignConfig(element, processingEnv, gafClientAnnotation);
     }
