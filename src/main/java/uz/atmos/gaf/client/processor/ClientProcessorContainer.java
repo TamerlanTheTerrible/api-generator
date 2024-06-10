@@ -1,9 +1,9 @@
 package uz.atmos.gaf.client.processor;
 
 import uz.atmos.gaf.ApiType;
-import uz.atmos.gaf.client.processor.impl.GrpcClientProcessor;
-import uz.atmos.gaf.client.processor.impl.RestClientProcessor;
-import uz.atmos.gaf.client.processor.impl.ThriftClientProcessor;
+import uz.atmos.gaf.client.processor.grpc.GrpcClientProcessor;
+import uz.atmos.gaf.client.processor.rest.RestClientProcessor;
+import uz.atmos.gaf.client.processor.thrift.ThriftClientProcessor;
 
 import java.util.EnumMap;
 import java.util.Map;
