@@ -23,24 +23,29 @@ import java.util.Set;
 public class GafClientProcessor extends AbstractProcessor {
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-        for(TypeElement annotation: annotations) {
-            for(Element element: roundEnv.getElementsAnnotatedWith(annotation)) {
-                GafClient gafClientAnnotation = element.getAnnotation(GafClient.class);
-                ApiType[] types = gafClientAnnotation.types();
-                Set<ApiType> typeSet = new java.util.HashSet<>(Set.of(types));
+        try {
+            for(TypeElement annotation: annotations) {
+                for(Element element: roundEnv.getElementsAnnotatedWith(annotation)) {
+                    GafClient gafClientAnnotation = element.getAnnotation(GafClient.class);
+                    ApiType[] types = gafClientAnnotation.types();
+                    Set<ApiType> typeSet = new java.util.HashSet<>(Set.of(types));
 
-                if (typeSet.isEmpty()) {
-                    typeSet.addAll(List.of(ApiType.values()));
-                }
-
-                for (ApiType type: typeSet) {
-                    if(type == ApiType.REST && element.getAnnotation(FeignClient.class) != null) {
-                        continue;
+                    if (typeSet.isEmpty()) {
+                        typeSet.addAll(List.of(ApiType.values()));
                     }
-                    ClientGeneratorContainer.get(type).generate(element, processingEnv, gafClientAnnotation);
+
+                    for (ApiType type: typeSet) {
+                        if(type == ApiType.REST && element.getAnnotation(FeignClient.class) != null) {
+                            continue;
+                        }
+                        ClientGeneratorContainer.get(type).generate(element, processingEnv, gafClientAnnotation);
+                    }
                 }
             }
+            return true;
+        } catch (Exception e) {
+            System.err.println(e.getMessage());
+            return false;
         }
-        return true;
     }
 }

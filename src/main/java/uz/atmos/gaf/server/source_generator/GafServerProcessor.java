@@ -24,25 +24,29 @@ public class GafServerProcessor extends AbstractProcessor {
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-        for (TypeElement annotation : annotations) {
-            for (Element element : roundEnv.getElementsAnnotatedWith(annotation)) {
-                GafServer gafServerAnnotation = element.getAnnotation(GafServer.class);
-                ApiType[] types = gafServerAnnotation.types();
-                Set<ApiType> typeSet = new java.util.HashSet<>(Set.of(types));
+        try {
+            for (TypeElement annotation : annotations) {
+                for (Element element : roundEnv.getElementsAnnotatedWith(annotation)) {
+                    GafServer gafServerAnnotation = element.getAnnotation(GafServer.class);
+                    ApiType[] types = gafServerAnnotation.types();
+                    Set<ApiType> typeSet = new java.util.HashSet<>(Set.of(types));
 
-                if (typeSet.isEmpty()) {
-                    typeSet.addAll(List.of(ApiType.values()));
-                }
-
-                for (ApiType type : typeSet) {
-                    if(type == ApiType.REST && (element.getAnnotation(Controller.class) != null || element.getAnnotation(RestController.class) != null)) {
-                        continue;
+                    if (typeSet.isEmpty()) {
+                        typeSet.addAll(List.of(ApiType.values()));
                     }
-                    ApiGeneratorContainer.get(type).generate(element, processingEnv, gafServerAnnotation);
+
+                    for (ApiType type : typeSet) {
+                        if(type == ApiType.REST && (element.getAnnotation(Controller.class) != null || element.getAnnotation(RestController.class) != null)) {
+                            continue;
+                        }
+                        ApiGeneratorContainer.get(type).generate(element, processingEnv, gafServerAnnotation);
+                    }
                 }
             }
+            return true;
+        } catch (Exception e) {
+            System.err.println(e.getMessage());
+            return false;
         }
-
-        return true;
     }
 }
