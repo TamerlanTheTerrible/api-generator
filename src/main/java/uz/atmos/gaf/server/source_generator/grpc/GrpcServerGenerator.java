@@ -1,5 +1,7 @@
-package uz.atmos.gaf.server.source_generator.impl;
+package uz.atmos.gaf.server.source_generator.grpc;
 
+import freemarker.template.Configuration;
+import freemarker.template.Template;
 import uz.atmos.gaf.ElementUtil;
 import uz.atmos.gaf.exception.GafException;
 import uz.atmos.gaf.server.GafServer;
@@ -14,25 +16,26 @@ import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
-import javax.tools.FileObject;
 import javax.tools.StandardLocation;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.*;
 
 /**
- * Created by Temurbek Ismoilov on 05/03/24.
+ * Created by Temurbek Ismoilov on 05/06/24.
  */
 
-public class GrpcApiGenerator implements ApiGenerator {
-
+public class GrpcServerGenerator implements ApiGenerator {
     private final Map<String, String> map;
     private final Set<String> convertedClassSet;
+    private final Configuration cfg;
 
-    public GrpcApiGenerator() {
+    public GrpcServerGenerator() {
         this.convertedClassSet = new HashSet<>();
+        // Java-Proto map
         this.map = new HashMap<>();
         map.put("String", "string");
+        map.put("char", "string");
+        map.put("Char", "string");
         map.put("Integer", "int32");
         map.put("int", "int32");
         map.put("Long", "int64");
@@ -44,75 +47,74 @@ public class GrpcApiGenerator implements ApiGenerator {
         map.put("Boolean", "bool");
         map.put("boolean", "bool");
         map.put("ByteString", "bytes");
-        map.put("Object", "Any");
+        map.put("Object", "google.protobuf.Any");
         map.put("byte", "byte");
         map.put("Byte", "byte");
+        map.put("T", "google.protobuf.Any");
+        map.put("Map", "map<string, string>");
+        // template config
+        cfg = new Configuration(Configuration.VERSION_2_3_31);
+        cfg.setClassForTemplateLoading(getClass(), "/templates/server/grpc/");
     }
 
     @Override
     public void generate(Element element, ProcessingEnvironment processingEnv, GafServer gafServerAnnotation) {
-        final String serviceName = element.getSimpleName().toString();
-        try {
-            System.out.println("Invoking " + this.getClass().getSimpleName() + " for " + serviceName);
-            // Create a new resource file (here, we'll create a properties file)
-            FileObject resourceFile = processingEnv.getFiler().createResource(
-                    StandardLocation.CLASS_OUTPUT,
-                    element.getEnclosingElement().toString(), // No package for this example
-                    serviceName.replace("Service", "") + ".proto", // Name of the resource file
-                    element // Associated elements
-            );
+        System.out.println("Generating grpc template for " + element);
 
-            // Write content to the resource file
-            generate(element, resourceFile);
+        final String serviceName = element.getSimpleName().toString();
+
+        try (PrintWriter writer = new PrintWriter(
+                processingEnv.getFiler().createResource(
+                        StandardLocation.CLASS_OUTPUT,
+                        element.getEnclosingElement().toString(), // No package for this example
+                        serviceName + ".proto", // Name of the resource file
+                        element).openWriter())
+        ) {
+            Map<String, Object> input = new HashMap<>();
+            input.put("serviceName", element.getSimpleName().toString());
+            final Map<String, Object> map = generateMethod(element, gafServerAnnotation);
+            input.put("methods", map.get("methods"));
+            input.put("messages", map.get("messages"));
+
+            Template template = cfg.getTemplate("grpc_template.ftl");
+            template.process(input, writer);
         } catch (Exception e) {
             System.err.println("Error while processing " + serviceName + " : " + e.getMessage());
         }
     }
 
-    private void generate(Element element, FileObject resourceFile) {
-        try (PrintWriter writer = new PrintWriter(resourceFile.openWriter())) {
-            writer.print("""
-                syntax = "proto3";
-                package com.proto;
-                option java_multiple_files = true;
-                
-                import "google/protobuf/any.proto";
-                import "google/protobuf/empty.proto";
+    private Map<String, Object> generateMethod(Element element, GafServer gafServerAnnotation) {
+        System.out.println("Generating GRPC methods");
 
-                service Proto%s {
-                """.formatted(element.getSimpleName().toString()));
+        List<String> messages = new ArrayList<>();
+        List<Map<String, String>> methodList = new ArrayList<>();
 
-            // handle methods
-            final List<? extends Element> methods = element.getEnclosedElements().stream()
-                    .filter(e -> ElementKind.METHOD.equals(e.getKind()))
-                    .toList();
-
-            List<String> messages = new ArrayList<>();
-            for(Element methodElement: methods) {
-                //process return type
-                TypeMirror returnType = ((ExecutableElement) methodElement).getReturnType();
-                String returnTypeName = generateReturnType(returnType, messages);
-                messages.add(generateMessage(returnType));
-                //process params
-                List<? extends VariableElement> parameters = ((ExecutableElement) methodElement).getParameters();
-                String paramString = getParamString(parameters, messages);
-                parameters.forEach(ve -> generateMessage(ve, new StringBuilder()));
-                //write down methods
-                writer.print("""
-                          rpc %s(%s) returns (%s){};
-                        """.formatted(
-                        methodElement.getSimpleName(),
-                        paramString,
-                        returnTypeName
-                ));
-            }
-            writer.write("}\n");
-            messages.forEach(writer::write);
-        } catch (IOException e) {
-            System.err.println(e.getMessage());
-            throw new RuntimeException(e);
+        final List<? extends Element> methods = element.getEnclosedElements().stream()
+                .filter(e -> ElementKind.METHOD.equals(e.getKind()))
+                .toList();
+        for(Element methodElement: methods) {
+            Map<String, String> methodMap = new HashMap<>();
+            //process return type
+            TypeMirror returnType = ((ExecutableElement) methodElement).getReturnType();
+            String returnTypeName = generateReturnType(returnType, messages);
+            generateMessage(returnType, messages);
+            //process params
+            List<? extends VariableElement> parameters = ((ExecutableElement) methodElement).getParameters();
+            System.out.println("PARAMS: " + Arrays.toString(parameters.stream().map(ve -> ve.asType().toString()).toArray()));
+            String paramString = getParamString(parameters, messages);
+            parameters.forEach(ve -> generateMessage(ve.asType(), messages));
+            //full method parts the map
+            methodMap.put("name", methodElement.getSimpleName().toString());
+            methodMap.put("paramString", paramString);
+            methodMap.put("returnTypeName", returnTypeName);
+            methodList.add(methodMap);
         }
 
+        Map<String, Object> result = new HashMap<>();
+        result.put("methods", methodList);
+        result.put("messages", messages);
+
+        return result;
     }
 
     private String getParamString(List<? extends VariableElement> parameters, List<String> messages) {
@@ -178,7 +180,6 @@ public class GrpcApiGenerator implements ApiGenerator {
         if (!convertedClassSet.contains(messageName)) {
             convertedClassSet.add(messageName);
             String message = """
-                
                 message %s {
                  %s = 1;
                 }
@@ -187,43 +188,56 @@ public class GrpcApiGenerator implements ApiGenerator {
         }
     }
 
-    private String generateMessage(TypeMirror typeMirror) {
+    private String generateMessage(TypeMirror typeMirror, List<String> messages) {
         StringBuilder sb = new StringBuilder();
+
         // Process return type (if it's a class)
         if (typeMirror.getKind() == TypeKind.DECLARED ) {
-            if (((DeclaredType) typeMirror).asElement().getKind() == ElementKind.CLASS) {
-                generateMessage(((DeclaredType) typeMirror).asElement(), sb);
-            } else if (((DeclaredType) typeMirror).asElement().getKind() == ElementKind.ENUM) {
-                generateEnum(((DeclaredType) typeMirror).asElement(), sb);
+            final Element element = ((DeclaredType) typeMirror).asElement();
+            //check if the element is primitive or the primitive's wrapper
+            if (map.containsKey(element.getSimpleName().toString())) {
+                final String protoName = map.get(element.getSimpleName().toString());
+                String wrapperName = createWrapperName(protoName);
+                addToTheMessageList(messages, wrapperName, protoName + " " + protoName.toLowerCase());
+                return wrapperName;
+            }
+
+            if (element.getKind() == ElementKind.CLASS) {
+                return generateMessage(element, sb, messages);
+            } else if (element.getKind() == ElementKind.ENUM) {
+                return  generateEnum(element, sb, messages);
             }
         } else {
-
+            //write proto wrapper of this primitive
+            String protoName = getProtoName(((PrimitiveType) typeMirror).toString());
+            String wrapperName = createWrapperName(protoName);
+            addToTheMessageList(messages, wrapperName, protoName + " " + protoName.toLowerCase());
+            return wrapperName;
         }
 
-        return sb.toString();
+        return null;
     }
 
-    private void generateMessage(Element element, StringBuilder sb) {
+    private String generateMessage(Element element, StringBuilder sb, List<String> messages) {
+        final String messageName = element.getSimpleName().toString();
+        if(convertedClassSet.contains(messageName)) {
+            return "";
+        }
+        // write message name
+        sb.append("\n").append("message ").append(messageName).append(" {\n");
+
         List<String> nestedMessages = new ArrayList<>();
         // Filter fields
         List<? extends Element> fields = element.getEnclosedElements()
                 .stream()
                 .filter(e -> e.getKind() == ElementKind.FIELD)
                 .toList();
-        System.out.println("Message name: " + element.getSimpleName());
-
-        // write message name
-        sb.append("\n").append("message ").append(element.getSimpleName()).append(" {\n");
 
         // Process each field
         for (int i=0; i<fields.size(); i++) {
             //Get variables for log
             Element field = fields.get(i);
-            String fieldType = field.asType().toString();
-            String fieldName = field.getSimpleName().toString();
             TypeKind fieldKind = field.asType().getKind();
-            System.out.println("Message field type: " + fieldType + ", name: " + fieldName + ", kind: " + fieldKind);
-
             // Process class type
             if(fieldKind == TypeKind.DECLARED) {
                 processReferenceType(sb, field, i, nestedMessages);
@@ -236,10 +250,21 @@ public class GrpcApiGenerator implements ApiGenerator {
             }
         }
         sb.append("}");
-        nestedMessages.forEach(m -> sb.append("\n").append(m));
+        nestedMessages.forEach(sb::append);
+
+        //add to message list
+        final String message = sb.toString();
+        messages.add(message);
+        convertedClassSet.add(messageName);
+
+        return message;
     }
 
-    private void generateEnum(Element element, StringBuilder sb) {
+    private String generateEnum(Element element, StringBuilder sb, List<String> messages) {
+        final String messageName = element.getSimpleName().toString();
+        if(convertedClassSet.contains(messageName)) {
+            return "";
+        }
         // filter elements
         List<? extends Element> fields = element.getEnclosedElements()
                 .stream()
@@ -255,6 +280,13 @@ public class GrpcApiGenerator implements ApiGenerator {
                     .append(";\n");
         }
         sb.append("}\n");
+
+        //add to message list
+        final String message = sb.toString();
+        messages.add(message);
+        convertedClassSet.add(messageName);
+
+        return message;
     }
 
     private void processPrimitive(StringBuilder sb, Element element, int i) {
@@ -292,7 +324,7 @@ public class GrpcApiGenerator implements ApiGenerator {
             if(declaredType != null && !convertedClassSet.contains(fieldType)) {
                 //add to th set so that next time not to process it
                 convertedClassSet.add(fieldType);
-                nestedMessages.add(generateMessage(declaredType));
+                generateMessage(declaredType, nestedMessages);
             }
         }
     }

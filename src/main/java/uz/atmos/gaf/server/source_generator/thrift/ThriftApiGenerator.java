@@ -1,4 +1,4 @@
-package uz.atmos.gaf.server.source_generator.impl;
+package uz.atmos.gaf.server.source_generator.thrift;
 
 import uz.atmos.gaf.server.GafServer;
 import uz.atmos.gaf.server.source_generator.ApiGenerator;
