@@ -1,6 +1,8 @@
 package uz.atmos.gaf.server.source_generator;
 
 import com.google.auto.service.AutoService;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RestController;
 import uz.atmos.gaf.ApiType;
 import uz.atmos.gaf.server.GafServer;
 
@@ -33,6 +35,9 @@ public class GafServerProcessor extends AbstractProcessor {
                 }
 
                 for (ApiType type : typeSet) {
+                    if(type == ApiType.REST && (element.getAnnotation(Controller.class) != null || element.getAnnotation(RestController.class) != null)) {
+                        continue;
+                    }
                     ApiGeneratorContainer.get(type).generate(element, processingEnv, gafServerAnnotation);
                 }
             }

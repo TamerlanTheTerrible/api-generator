@@ -41,6 +41,6 @@ public class GafClientProcessor extends AbstractProcessor {
                 }
             }
         }
-        return false;
+        return true;
     }
 }
