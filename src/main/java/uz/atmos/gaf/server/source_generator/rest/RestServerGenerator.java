@@ -1,4 +1,4 @@
-package uz.atmos.gaf.server.source_generator.impl;
+package uz.atmos.gaf.server.source_generator.rest;
 
 import freemarker.template.Configuration;
 import freemarker.template.Template;
@@ -25,12 +25,12 @@ import static uz.atmos.gaf.ElementUtil.*;
  * Created by Temurbek Ismoilov on 05/03/24.
  */
 
-public class RestApiFMTemplateGenerator implements ApiGenerator {
+public class RestServerGenerator implements ApiGenerator {
 
     private final Set<String> packages ;
     private final Configuration cfg;
 
-    public RestApiFMTemplateGenerator() {
+    public RestServerGenerator() {
         packages = new HashSet<>();
         cfg = new Configuration(Configuration.VERSION_2_3_31);
         cfg.setClassForTemplateLoading(getClass(), "/templates/server/rest/");
