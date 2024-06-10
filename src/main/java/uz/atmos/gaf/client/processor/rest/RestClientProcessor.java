@@ -1,4 +1,4 @@
-package uz.atmos.gaf.client.processor.impl;
+package uz.atmos.gaf.client.processor.rest;
 
 import freemarker.template.Configuration;
 import freemarker.template.Template;
