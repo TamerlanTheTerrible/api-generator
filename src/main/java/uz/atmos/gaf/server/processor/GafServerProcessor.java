@@ -21,7 +21,6 @@ import java.util.Set;
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
 @SupportedAnnotationTypes("uz.atmos.gaf.server.GafServer")
 public class GafServerProcessor extends AbstractProcessor {
-
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         try {

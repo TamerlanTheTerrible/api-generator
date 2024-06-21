@@ -17,5 +17,7 @@ public class GrpcServerProcessor implements ApiProcessor {
         GrpcSchemeFreeMakerGenerator schemeFreeMakerGenerator = new GrpcSchemeFreeMakerGenerator();
         schemeFreeMakerGenerator.generate(element, processingEnv, gafServerAnnotation);
         //generate gRPC server configuration
+        GrpcConfigurationGenerator configurationGenerator = new GrpcConfigurationGenerator();
+        configurationGenerator.generate(element, processingEnv, gafServerAnnotation);
     }
 }
