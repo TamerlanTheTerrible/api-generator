@@ -57,7 +57,7 @@ public class GrpcSchemeFreeMakerGenerator {
     }
 
     public void generate(Element element, ProcessingEnvironment processingEnv, GafServer gafServerAnnotation) {
-        System.out.println("Generating grpc template for " + element);
+        System.out.println("Generating grpc scheme for " + element);
 
         final String serviceName = element.getSimpleName().toString();
 
@@ -74,8 +74,9 @@ public class GrpcSchemeFreeMakerGenerator {
             input.put("methods", map.get("methods"));
             input.put("messages", map.get("messages"));
 
-            Template template = cfg.getTemplate("grpc_template.ftl");
+            Template template = cfg.getTemplate("grpc_schema_template.ftl");
             template.process(input, writer);
+//            invokePlugin();
         } catch (Exception e) {
             System.err.println("Error while processing " + serviceName + " : " + e.getMessage());
         }
@@ -338,4 +339,24 @@ public class GrpcSchemeFreeMakerGenerator {
     private static void appendFieldRecord(StringBuilder sb, String protoName, String fieldName, int i) {
         sb.append(" ").append(protoName).append(" ").append(fieldName).append(" = ").append(i + 1).append(";").append("\n");
     }
+
+//    private static void invokePlugin() throws MavenInvocationException {
+//        System.out.println("Invoking gRPC maven plugin");
+//
+//        InvocationRequest request = new DefaultInvocationRequest();
+//        request.setPomFile(new File("/Users/tamerlantheterrible/IdeProjects 2.0/generated-api-factory-master/pom.xml"));
+//        request.setGoals(List.of("compile", "compile-custom"));
+//        request.setBatchMode(true);  // Set to batch mode
+//
+//        Invoker invoker = new DefaultInvoker();
+//        invoker.setMavenHome(new File("/opt/homebrew/Cellar/maven/3.8.6"));
+//        invoker.setOutputHandler(System.out::println);
+//        invoker.setErrorHandler(System.err::println); // Redirect error stream
+//
+//        InvocationResult result = invoker.execute(request);
+//
+//        if (result.getExitCode() != 0) {
+//            throw new IllegalStateException("Build failed.");
+//        }
+//    }
 }
