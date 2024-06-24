@@ -18,6 +18,6 @@ public class GrpcServerProcessor implements ApiProcessor {
         schemeFreeMakerGenerator.generate(element, processingEnv, gafServerAnnotation);
         //generate gRPC server configuration
         EnableGrpcServerGenerator configurationGenerator = new EnableGrpcServerGenerator();
-        configurationGenerator.generate(element, processingEnv, gafServerAnnotation);
+//        configurationGenerator.generate(element, processingEnv, gafServerAnnotation);
     }
 }

@@ -36,13 +36,14 @@ public class GrpcServerConfigurationGenerator {
 
         final String serviceClassName = element.getSimpleName().toString();
         String packageName = element.getEnclosingElement().toString();
-        String className = serviceClassName + "GrpcImpl";
-        String builderFullName = packageName + "." + "GrpcServerConfiguration";
+        String builderFullName = packageName + "." + "GrpcServerConfig";
         try (PrintWriter fileWriter = new PrintWriter(processingEnv.getFiler().createSourceFile(builderFullName).openWriter())) {
             //generate input
             Map<String, Object> input = new HashMap<>();
             input.put("packageName", packageName);
-            input.put("className", className);
+            input.put("className", serviceClassName + "Grpc");
+            input.put("implementationClassName", serviceClassName + "GrpcImpl");
+            input.put("baseClassName", serviceClassName + "ImplBase");
             // process the template
             Template template = cfg.getTemplate("grpc_configuration_template.ftl");
             template.process(input, fileWriter);
