@@ -1,7 +1,7 @@
 package uz.atmos.gaf.server.processor;
 
 import uz.atmos.gaf.ApiType;
-import uz.atmos.gaf.server.processor.grpc.GrpcServerProcessor;
+import uz.atmos.gaf.server.processor.grpc.gafserver.GrpcServerProcessor;
 import uz.atmos.gaf.server.processor.rest.RestServerProcessor;
 import uz.atmos.gaf.server.processor.thrift.ThriftApiProcessor;
 
