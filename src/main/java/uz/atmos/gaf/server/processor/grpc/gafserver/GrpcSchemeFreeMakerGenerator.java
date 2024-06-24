@@ -1,4 +1,4 @@
-package uz.atmos.gaf.server.processor.grpc;
+package uz.atmos.gaf.server.processor.grpc.gafserver;
 
 import freemarker.template.Configuration;
 import freemarker.template.Template;

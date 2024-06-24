@@ -1,4 +1,4 @@
-package uz.atmos.gaf.server.processor.grpc;
+package uz.atmos.gaf.server.processor.grpc.gafserver;
 
 import uz.atmos.gaf.server.GafServer;
 import uz.atmos.gaf.server.processor.ApiProcessor;
@@ -17,7 +17,7 @@ public class GrpcServerProcessor implements ApiProcessor {
         GrpcSchemeFreeMakerGenerator schemeFreeMakerGenerator = new GrpcSchemeFreeMakerGenerator();
         schemeFreeMakerGenerator.generate(element, processingEnv, gafServerAnnotation);
         //generate gRPC server configuration
-        GrpcConfigurationGenerator configurationGenerator = new GrpcConfigurationGenerator();
+        EnableGrpcServerGenerator configurationGenerator = new EnableGrpcServerGenerator();
         configurationGenerator.generate(element, processingEnv, gafServerAnnotation);
     }
 }
