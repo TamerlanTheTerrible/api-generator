@@ -1,3 +1,5 @@
+package ${packageName};
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import io.grpc.Server;
