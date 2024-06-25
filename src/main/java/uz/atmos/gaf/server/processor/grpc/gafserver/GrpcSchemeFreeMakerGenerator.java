@@ -2,6 +2,7 @@ package uz.atmos.gaf.server.processor.grpc.gafserver;
 
 import freemarker.template.Configuration;
 import freemarker.template.Template;
+import freemarker.template.TemplateException;
 import uz.atmos.gaf.ElementUtil;
 import uz.atmos.gaf.exception.GafException;
 import uz.atmos.gaf.server.GafServer;
@@ -16,6 +17,7 @@ import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.StandardLocation;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.*;
 
@@ -57,6 +59,29 @@ public class GrpcSchemeFreeMakerGenerator {
     }
 
     public void generate(Element element, ProcessingEnvironment processingEnv, GafServer gafServerAnnotation) {
+        generateScheme(element, processingEnv, gafServerAnnotation);
+        generateEnableGrpcServer(element, processingEnv, gafServerAnnotation);
+    }
+
+    private void generateEnableGrpcServer(Element element, ProcessingEnvironment processingEnv, GafServer gafServerAnnotation) {
+        System.out.println("Generating enable gRPC server implementation for " + element);
+        String packageName = element.getEnclosingElement().toString();
+        String builderFullName = packageName + "." + "EnableGrpcServerImpl";
+        try (PrintWriter fileWriter = new PrintWriter(processingEnv.getFiler().createSourceFile(builderFullName).openWriter())) {
+            //generate input
+            Map<String, Object> input = new HashMap<>();
+            input.put("packageName", packageName);
+            input.put("serviceName", element.getSimpleName().toString());
+            // process the template
+            Template template = cfg.getTemplate("enable_grpc_server_template.ftl");
+            template.process(input, fileWriter);
+        } catch (IOException | TemplateException e) {
+            System.err.println("gRPC config generation error: " + e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void generateScheme(Element element, ProcessingEnvironment processingEnv, GafServer gafServerAnnotation) {
         System.out.println("Generating grpc scheme for " + element);
 
         final String serviceName = element.getSimpleName().toString();
@@ -76,7 +101,6 @@ public class GrpcSchemeFreeMakerGenerator {
 
             Template template = cfg.getTemplate("grpc_schema_template.ftl");
             template.process(input, writer);
-//            invokePlugin();
         } catch (Exception e) {
             System.err.println("Error while processing " + serviceName + " : " + e.getMessage());
         }
@@ -339,24 +363,4 @@ public class GrpcSchemeFreeMakerGenerator {
     private static void appendFieldRecord(StringBuilder sb, String protoName, String fieldName, int i) {
         sb.append(" ").append(protoName).append(" ").append(fieldName).append(" = ").append(i + 1).append(";").append("\n");
     }
-
-//    private static void invokePlugin() throws MavenInvocationException {
-//        System.out.println("Invoking gRPC maven plugin");
-//
-//        InvocationRequest request = new DefaultInvocationRequest();
-//        request.setPomFile(new File("/Users/tamerlantheterrible/IdeProjects 2.0/generated-api-factory-master/pom.xml"));
-//        request.setGoals(List.of("compile", "compile-custom"));
-//        request.setBatchMode(true);  // Set to batch mode
-//
-//        Invoker invoker = new DefaultInvoker();
-//        invoker.setMavenHome(new File("/opt/homebrew/Cellar/maven/3.8.6"));
-//        invoker.setOutputHandler(System.out::println);
-//        invoker.setErrorHandler(System.err::println); // Redirect error stream
-//
-//        InvocationResult result = invoker.execute(request);
-//
-//        if (result.getExitCode() != 0) {
-//            throw new IllegalStateException("Build failed.");
-//        }
-//    }
 }

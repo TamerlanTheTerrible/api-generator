@@ -13,11 +13,7 @@ import javax.lang.model.element.Element;
 public class GrpcServerProcessor implements ApiProcessor {
     @Override
     public void process(Element element, ProcessingEnvironment processingEnv, GafServer gafServerAnnotation) {
-        //generate gRPC scheme
         GrpcSchemeFreeMakerGenerator schemeFreeMakerGenerator = new GrpcSchemeFreeMakerGenerator();
         schemeFreeMakerGenerator.generate(element, processingEnv, gafServerAnnotation);
-        //generate gRPC server configuration
-        EnableGrpcServerGenerator configurationGenerator = new EnableGrpcServerGenerator();
-//        configurationGenerator.generate(element, processingEnv, gafServerAnnotation);
     }
 }
