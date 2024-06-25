@@ -35,7 +35,8 @@ public class GrpcServerConfigurationGenerator {
         System.out.println("Generating gRPC server configuration for " + element);
 
         final String serviceClassName = element.getSimpleName().toString();
-        String packageName = element.getEnclosingElement().toString();
+        String packageName = element.getEnclosingElement().getEnclosingElement().toString();
+        System.out.println("EnableGrpcServerImpl package name: " + packageName);
         String builderFullName = packageName + "." + "GrpcServerConfig";
         try (PrintWriter fileWriter = new PrintWriter(processingEnv.getFiler().createSourceFile(builderFullName).openWriter())) {
             //generate input
