@@ -6,9 +6,7 @@ import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import java.io.IOException;
 import uz.atmos.gaf.${className};
-
-<#--${imports}-->
-
+${imports}
 @Configuration
 public class GrpcServerConfig {
 
@@ -34,12 +32,15 @@ public class GrpcServerConfig {
     }
 
     static class ${implementationClassName} extends ${className}.${baseClassName}{
-<#--        <#assign methodName = method.methodName>-->
-<#--        <#assign returnType = method.returnType>-->
-<#--        <#assign serviceParams = method.serviceParams>-->
+<#--        <#list methods as method>-->
+<#--            <#assign methodName = method.methodName>-->
+<#--            <#assign returnType = method.returnType>-->
+<#--            <#assign paramTypesAndNames = method.paramTypesAndNames>-->
+<#--            <#assign paramNames = method.paramNames>-->
 
-<#--        ${returnType} ${methodName}(${serviceParams}) {-->
-<#--            return super.${methodName}(${serviceParams});-->
+<#--            ${returnType} ${methodName}(${paramTypesAndNames}) {-->
+<#--            return super.${methodName}(${paramNames});-->
 <#--        }-->
+<#--        </#list>-->
     }
 }

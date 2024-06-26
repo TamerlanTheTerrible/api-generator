@@ -60,27 +60,7 @@ public class GrpcSchemeFreeMakerGenerator {
 
     public void generate(Element element, ProcessingEnvironment processingEnv, GafServer gafServerAnnotation) {
         generateScheme(element, processingEnv, gafServerAnnotation);
-        generateEnableGrpcServer(element, processingEnv, gafServerAnnotation);
     }
-
-    private void generateEnableGrpcServer(Element element, ProcessingEnvironment processingEnv, GafServer gafServerAnnotation) {
-        System.out.println("Generating enable gRPC server implementation for " + element);
-        String packageName = element.getEnclosingElement().toString();
-        String builderFullName = packageName + "." + "EnableGrpcServerImpl";
-        try (PrintWriter fileWriter = new PrintWriter(processingEnv.getFiler().createSourceFile(builderFullName).openWriter())) {
-            //generate input
-            Map<String, Object> input = new HashMap<>();
-            input.put("packageName", packageName);
-            input.put("serviceName", element.getSimpleName().toString());
-            // process the template
-            Template template = cfg.getTemplate("enable_grpc_server_template.ftl");
-            template.process(input, fileWriter);
-        } catch (IOException | TemplateException e) {
-            System.err.println("gRPC config generation error: " + e);
-            throw new RuntimeException(e);
-        }
-    }
-
     private void generateScheme(Element element, ProcessingEnvironment processingEnv, GafServer gafServerAnnotation) {
         System.out.println("Generating grpc scheme for " + element);
 
