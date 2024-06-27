@@ -1,6 +1,8 @@
 package uz.atmos.gaf.server.processor.grpc.config;
 
 import com.google.auto.service.AutoService;
+import uz.atmos.gaf.ApiType;
+import uz.atmos.gaf.server.GafServer;
 
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
@@ -21,8 +23,13 @@ public class GrpcServerConfigurationProcessor extends AbstractProcessor {
         try {
             for (TypeElement annotation : annotations) {
                 for (Element element : roundEnv.getElementsAnnotatedWith(annotation)) {
-                    var generator = new GrpcServerConfigurationGenerator();
-                    generator.generate(element, processingEnv);
+                    GafServer gafServerAnnotation = element.getAnnotation(GafServer.class);
+                    ApiType[] types = gafServerAnnotation.types();
+                    Set<ApiType> typeSet = new java.util.HashSet<>(Set.of(types));
+                    if(typeSet.isEmpty() || typeSet.contains(ApiType.GRPC)) {
+                        var generator = new GrpcServerConfigurationGenerator();
+                        generator.generate(element, processingEnv);
+                    }
                 }
             }
             return true;
