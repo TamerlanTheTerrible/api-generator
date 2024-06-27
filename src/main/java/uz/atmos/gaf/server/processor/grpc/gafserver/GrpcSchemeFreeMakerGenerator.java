@@ -2,9 +2,7 @@ package uz.atmos.gaf.server.processor.grpc.gafserver;
 
 import freemarker.template.Configuration;
 import freemarker.template.Template;
-import freemarker.template.TemplateException;
 import uz.atmos.gaf.ElementUtil;
-import uz.atmos.gaf.exception.GafException;
 import uz.atmos.gaf.server.GafServer;
 
 import javax.annotation.processing.ProcessingEnvironment;
@@ -17,42 +15,22 @@ import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.StandardLocation;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.*;
+
+import static uz.atmos.gaf.server.processor.grpc.gafserver.ProtoUtil.createWrapperName;
+import static uz.atmos.gaf.server.processor.grpc.gafserver.ProtoUtil.getProtoName;
 
 /**
  * Created by Temurbek Ismoilov on 05/06/24.
  */
 
 public class GrpcSchemeFreeMakerGenerator {
-    private final Map<String, String> map;
     private final Set<String> convertedClassSet;
     private final Configuration cfg;
 
     public GrpcSchemeFreeMakerGenerator() {
         this.convertedClassSet = new HashSet<>();
-        // Java-Proto map
-        this.map = new HashMap<>();
-        map.put("String", "string");
-        map.put("char", "string");
-        map.put("Char", "string");
-        map.put("Integer", "int32");
-        map.put("int", "int32");
-        map.put("Long", "int64");
-        map.put("long", "int64");
-        map.put("Double", "double");
-        map.put("double", "double");
-        map.put("Float", "float");
-        map.put("float", "float");
-        map.put("Boolean", "bool");
-        map.put("boolean", "bool");
-        map.put("ByteString", "bytes");
-        map.put("Object", "google.protobuf.Any");
-        map.put("byte", "byte");
-        map.put("Byte", "byte");
-        map.put("T", "google.protobuf.Any");
-        map.put("Map", "map<string, string>");
         // template config
         cfg = new Configuration(Configuration.VERSION_2_3_31);
         cfg.setClassForTemplateLoading(getClass(), "/templates/server/grpc/");
@@ -126,8 +104,8 @@ public class GrpcSchemeFreeMakerGenerator {
         }
         Element element = ((DeclaredType) parameters.get(0).asType()).asElement();
         String className = element.getSimpleName().toString();
-        if(map.containsKey(className)) {
-            final String protoName = map.get(className);
+        if(ProtoUtil.protoJavaMap.containsKey(className)) {
+            final String protoName = ProtoUtil.protoJavaMap.get(className);
             String wrapperName = createWrapperName(protoName);
             addToTheMessageList(messages, wrapperName, protoName + " " + protoName.toLowerCase());
             return wrapperName;
@@ -154,16 +132,16 @@ public class GrpcSchemeFreeMakerGenerator {
                 List<? extends TypeMirror> genericParamTypes = declaredType.getTypeArguments();
                 className = genericParamTypes.isEmpty() ? "Object" : ((DeclaredType) genericParamTypes.get(0)).asElement().getSimpleName().toString();
                 // change classname to proto type, if possible
-                if (map.containsKey(className)) {
-                    className = map.get(className);
+                if (ProtoUtil.protoJavaMap.containsKey(className)) {
+                    className = ProtoUtil.protoJavaMap.get(className);
                 }
                 String wrapperName = createWrapperName(className + "Array");
                 addToTheMessageList(messages, wrapperName, "repeated " + className + " " + className.toLowerCase());
                 return wrapperName;
             } else {
                 //write proto wrapper of this java primitive wrapper class
-                if (map.containsKey(className)) {
-                    String protoName = map.get(className);
+                if (ProtoUtil.protoJavaMap.containsKey(className)) {
+                    String protoName = ProtoUtil.protoJavaMap.get(className);
                     String wrapperName = createWrapperName(protoName);
                     addToTheMessageList(messages, wrapperName, protoName + " " + protoName.toLowerCase());
                     return wrapperName;
@@ -172,10 +150,6 @@ public class GrpcSchemeFreeMakerGenerator {
                 }
             }
         }
-    }
-
-    private static String createWrapperName(String protoName) {
-        return Character.toUpperCase(protoName.charAt(0)) + protoName.substring(1) + "Wrapper";
     }
 
     private void addToTheMessageList(List<String> messages, String messageName, String messageContent) {
@@ -198,8 +172,8 @@ public class GrpcSchemeFreeMakerGenerator {
         if (typeMirror.getKind() == TypeKind.DECLARED ) {
             final Element element = ((DeclaredType) typeMirror).asElement();
             //check if the element is primitive or the primitive's wrapper
-            if (map.containsKey(element.getSimpleName().toString())) {
-                final String protoName = map.get(element.getSimpleName().toString());
+            if (ProtoUtil.protoJavaMap.containsKey(element.getSimpleName().toString())) {
+                final String protoName = ProtoUtil.protoJavaMap.get(element.getSimpleName().toString());
                 String wrapperName = createWrapperName(protoName);
                 addToTheMessageList(messages, wrapperName, protoName + " " + protoName.toLowerCase());
                 return wrapperName;
@@ -317,7 +291,7 @@ public class GrpcSchemeFreeMakerGenerator {
         }
         // get proto name
         String simpleClassName = declaredType == null ? "Object" : declaredType.asElement().getSimpleName().toString();
-        String protoName = map.get(simpleClassName);
+        String protoName = ProtoUtil.protoJavaMap.get(simpleClassName);
         // Write field if the type has appropriate proto mapping,
         if(protoName != null) {
             appendFieldRecord(sb, protoName, fieldName, i);
@@ -330,14 +304,6 @@ public class GrpcSchemeFreeMakerGenerator {
                 generateMessage(declaredType, nestedMessages);
             }
         }
-    }
-
-    private String getProtoName(String fieldType) {
-        String protoName = map.get(fieldType);
-        if (protoName == null) {
-            throw new GafException("Could not map java type: " + fieldType);
-        }
-        return protoName;
     }
 
     private static void appendFieldRecord(StringBuilder sb, String protoName, String fieldName, int i) {

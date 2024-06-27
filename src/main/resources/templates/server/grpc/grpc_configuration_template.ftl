@@ -5,6 +5,8 @@ import org.springframework.context.annotation.Configuration;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import java.io.IOException;
+import io.grpc.stub.StreamObserver;
+import uz.atmos.gaf.${outerClassName}.*;
 import uz.atmos.gaf.${className};
 ${imports}
 @Configuration
@@ -32,15 +34,16 @@ public class GrpcServerConfig {
     }
 
     static class ${implementationClassName} extends ${className}.${baseClassName}{
-<#--        <#list methods as method>-->
-<#--            <#assign methodName = method.methodName>-->
-<#--            <#assign returnType = method.returnType>-->
-<#--            <#assign paramTypesAndNames = method.paramTypesAndNames>-->
-<#--            <#assign paramNames = method.paramNames>-->
+        <#list methods as method>
+            <#assign methodName = method.methodName>
+            <#assign returnType = method.returnType>
+            <#assign paramTypesAndNames = method.paramTypeAndName>
+            <#assign paramNames = method.paramName>
 
-<#--            ${returnType} ${methodName}(${paramTypesAndNames}) {-->
-<#--            return super.${methodName}(${paramNames});-->
-<#--        }-->
-<#--        </#list>-->
+        @Override
+        public void ${methodName}(<#if paramNames?has_content>${paramTypesAndNames}, <#else>com.google.protobuf.Empty request, </#if> StreamObserver<${returnType}> responseObserver) {
+            super.${methodName}(<#if paramNames?has_content>${paramNames}, <#else>request, </#if> responseObserver);
+        }
+        </#list>
     }
 }
