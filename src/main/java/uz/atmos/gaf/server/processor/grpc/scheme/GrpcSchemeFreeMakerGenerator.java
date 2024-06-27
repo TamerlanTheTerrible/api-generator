@@ -1,4 +1,4 @@
-package uz.atmos.gaf.server.processor.grpc.gafserver;
+package uz.atmos.gaf.server.processor.grpc.scheme;
 
 import freemarker.template.Configuration;
 import freemarker.template.Template;
@@ -18,8 +18,8 @@ import javax.tools.StandardLocation;
 import java.io.PrintWriter;
 import java.util.*;
 
-import static uz.atmos.gaf.server.processor.grpc.gafserver.ProtoUtil.createWrapperName;
-import static uz.atmos.gaf.server.processor.grpc.gafserver.ProtoUtil.getProtoName;
+import static uz.atmos.gaf.server.processor.grpc.scheme.ProtoUtil.createWrapperName;
+import static uz.atmos.gaf.server.processor.grpc.scheme.ProtoUtil.getProtoName;
 
 /**
  * Created by Temurbek Ismoilov on 05/06/24.

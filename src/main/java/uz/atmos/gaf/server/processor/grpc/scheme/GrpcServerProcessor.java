@@ -1,4 +1,4 @@
-package uz.atmos.gaf.server.processor.grpc.gafserver;
+package uz.atmos.gaf.server.processor.grpc.scheme;
 
 import uz.atmos.gaf.server.GafServer;
 import uz.atmos.gaf.server.processor.ApiProcessor;

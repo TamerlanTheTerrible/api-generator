@@ -42,7 +42,10 @@ public class GrpcServerConfig {
 
         @Override
         public void ${methodName}(<#if paramNames?has_content>${paramTypesAndNames}, <#else>com.google.protobuf.Empty request, </#if> StreamObserver<${returnType}> responseObserver) {
-            super.${methodName}(<#if paramNames?has_content>${paramNames}, <#else>request, </#if> responseObserver);
+<#--            super.${methodName}(<#if paramNames?has_content>${paramNames}, <#else>request, </#if> responseObserver);-->
+            ${returnType} ${returnType?lower_case} = ${returnType}.newBuilder().build();
+            responseObserver.onNext(${returnType?lower_case});
+            responseObserver.onCompleted();
         }
         </#list>
     }

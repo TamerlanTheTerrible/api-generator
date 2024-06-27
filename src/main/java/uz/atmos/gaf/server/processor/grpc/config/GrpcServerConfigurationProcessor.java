@@ -1,8 +1,6 @@
-package uz.atmos.gaf.server.processor.grpc.enableserver.impl;
+package uz.atmos.gaf.server.processor.grpc.config;
 
 import com.google.auto.service.AutoService;
-import uz.atmos.gaf.server.GafServer;
-import uz.atmos.gaf.server.processor.grpc.enableserver.EnableGrpcServer;
 
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
@@ -17,7 +15,7 @@ import java.util.Set;
 @AutoService(Processor.class)
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
 @SupportedAnnotationTypes("uz.atmos.gaf.server.GafServer")
-public class EnableGrpcServerProcessor extends AbstractProcessor {
+public class GrpcServerConfigurationProcessor extends AbstractProcessor {
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         try {

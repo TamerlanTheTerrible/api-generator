@@ -1,1 +1,3 @@
 uz.atmos.gaf.client.processor.GafClientProcessor
+uz.atmos.gaf.server.processor.GafServerProcessor
+uz.atmos.gaf.server.processor.grpc.config.GrpcServerConfigurationProcessor
