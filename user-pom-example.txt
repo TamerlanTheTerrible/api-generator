@@ -28,7 +28,7 @@
                         </goals>
                         <configuration>
                             <annotationProcessors>
-                                <annotationProcessor>uz.atmos.gaf.server.processor.grpc.enableserver.impl.EnableGrpcServerProcessor</annotationProcessor>
+                                <annotationProcessor>uz.atmos.gaf.server.processor.grpc.config.GrpcServerConfigurationProcessor</annotationProcessor>
                             </annotationProcessors>
                             <source>17</source>
                             <target>17</target>
