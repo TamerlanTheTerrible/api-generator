@@ -75,15 +75,40 @@ public class GrpcServerConfigurationGenerator {
             Map<String, Object> methodMap = new HashMap<>();
             methodMap.put("returnType", generateReturnType(((ExecutableElement) methodElement).getReturnType()));
             methodMap.put("methodName", method.getSimpleName().toString());
-            methodMap.put("paramTypeAndName", getParamTypeAndName(methodElement));
-            methodMap.put("paramName", getParamName(methodElement));
+            methodMap.put("params", processParams(methodElement));
             methodMapList.add(methodMap);
         }
 
         return methodMapList;
     }
 
-    private String generateReturnType(TypeMirror returnType) {
+    private Map<String, String> processParams(Element methodElement) {
+        Map<String, String> result = new HashMap<>();
+        final List<? extends VariableElement> parameters = ((ExecutableElement) methodElement).getParameters();
+        if(parameters.isEmpty()) {
+            result.put("protoParamTypeAndName", "com.google.protobuf.Empty");
+            result.put("protoParamName", "");
+        } else {
+            final VariableElement variableElement = parameters.get(0);
+            final String protoTypeName = getProtoTypeName(variableElement);
+            String protoParamName = variableElement.getSimpleName().toString();
+            result.put("protoParamTypeAndName", protoTypeName + " " + protoParamName);
+            result.put("protoParamName", protoParamName);
+        }
+        return result;
+    }
+
+    private String getProtoTypeName(VariableElement variableElement) {
+        String className = ((DeclaredType) variableElement.asType()).asElement().getSimpleName().toString();
+        if(ProtoUtil.protoJavaMap.containsKey(className)) {
+            final String protoName = ProtoUtil.protoJavaMap.get(className);
+            className = createWrapperName(protoName);
+        }
+        return className;
+    }
+
+    private Map<String, String> generateReturnType(TypeMirror returnType) {
+        Map<String, String> result = new HashMap<>();
         final TypeKind kind = returnType.getKind();
         if(kind.isPrimitive()) {
             //write proto wrapper of this primitive
@@ -114,38 +139,4 @@ public class GrpcServerConfigurationGenerator {
             }
         }
     }
-
-    private String getParamTypeAndName(Element methodElement) {
-        final List<? extends VariableElement> parameters = ((ExecutableElement) methodElement).getParameters();
-        if (parameters.isEmpty()) {
-            return "com.google.protobuf.Empty";
-        }
-        final VariableElement variableElement = parameters.get(0);
-        final String className = getClassName(variableElement);
-        String varName = variableElement.getSimpleName().toString();
-        return className + " " + varName;
-    }
-
-    private String getClassName(VariableElement variableElement) {
-        System.out.println("VariableElement: " + ((DeclaredType) variableElement.asType()).asElement().getSimpleName().toString());
-        String className = ((DeclaredType) variableElement.asType()).asElement().getSimpleName().toString();
-        if(ProtoUtil.protoJavaMap.containsKey(className)) {
-            final String protoName = ProtoUtil.protoJavaMap.get(className);
-            className = createWrapperName(protoName);
-        }
-        return className;
-    }
-
-    private String getParamName(Element methodElement) {
-        final List<? extends VariableElement> parameters = ((ExecutableElement) methodElement).getParameters();
-        if (parameters.isEmpty()) {
-            return "";
-        }
-        final VariableElement variableElement = parameters.get(0);
-        return variableElement.getSimpleName().toString();
-
-    }
-
-
-
 }
