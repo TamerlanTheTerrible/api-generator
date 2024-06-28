@@ -47,6 +47,7 @@ public class GrpcServerConfigurationGenerator {
             //generate input
             Map<String, Object> input = new HashMap<>();
             input.put("packageName", packageName);
+            input.put("serviceClassName", serviceClassName);
             input.put("className", serviceClassName + "Grpc");
             input.put("implementationClassName", serviceClassName + "GrpcImpl");
             input.put("baseClassName", serviceClassName + "ImplBase");
@@ -82,20 +83,49 @@ public class GrpcServerConfigurationGenerator {
         return methodMapList;
     }
 
-    private Map<String, String> processParams(Element methodElement) {
-        Map<String, String> result = new HashMap<>();
+    private Map<String, Object> processParams(Element methodElement) {
+        Map<String, Object> result = new HashMap<>();
+        String protoParamTypeAndName;
+        String protoParamName;
+        String serviceParamType;
+
         final List<? extends VariableElement> parameters = ((ExecutableElement) methodElement).getParameters();
         if(parameters.isEmpty()) {
-            result.put("protoParamTypeAndName", "com.google.protobuf.Empty");
-            result.put("protoParamName", "");
+            protoParamTypeAndName = "com.google.protobuf.Empty empty";
+            protoParamName = "";
+            serviceParamType = "";
         } else {
             final VariableElement variableElement = parameters.get(0);
-            final String protoTypeName = getProtoTypeName(variableElement);
-            String protoParamName = variableElement.getSimpleName().toString();
-            result.put("protoParamTypeAndName", protoTypeName + " " + protoParamName);
-            result.put("protoParamName", protoParamName);
+            final Element element = ((DeclaredType) variableElement.asType()).asElement();
+            String className = element.getSimpleName().toString();
+
+            protoParamName = variableElement.getSimpleName().toString();
+            protoParamTypeAndName =  getProtoParamTypeName(className) + " " + protoParamName;
+            serviceParamType = element.getEnclosingElement() + "." + className;
+            // get fields
+            if(!variableElement.asType().getKind().isPrimitive() && !ProtoUtil.protoJavaMap.containsKey(className)) {
+                final List<String> fields = element.getEnclosedElements().stream()
+                        .filter(e -> ElementKind.FIELD.equals(e.getKind()))
+                        .map(f -> f.getSimpleName().toString())
+                        .toList();
+                result.put("fields", fields);
+            }
         }
+
+        result.put("protoParamTypeAndName", protoParamTypeAndName);
+        result.put("protoParamName", protoParamName);
+        result.put("serviceParamType", serviceParamType);
+
         return result;
+    }
+
+    private static String getProtoParamTypeName(String className) {
+        String protoTypeName = className;
+        if(ProtoUtil.protoJavaMap.containsKey(className)) {
+            final String protoName = ProtoUtil.protoJavaMap.get(className);
+            protoTypeName = createWrapperName(protoName);
+        }
+        return protoTypeName;
     }
 
     private String getProtoTypeName(VariableElement variableElement) {
@@ -109,34 +139,49 @@ public class GrpcServerConfigurationGenerator {
 
     private Map<String, String> generateReturnType(TypeMirror returnType) {
         Map<String, String> result = new HashMap<>();
+        String serviceReturnType;
+        String protoReturnType;
         final TypeKind kind = returnType.getKind();
         if(kind.isPrimitive()) {
-            //write proto wrapper of this primitive
-            String protoName = getProtoName(((PrimitiveType) returnType).toString());
-            return createWrapperName(protoName);
+            final String primitiveName = ((PrimitiveType) returnType).toString();
+            serviceReturnType = primitiveName;
+            protoReturnType = createWrapperName(getProtoName(primitiveName));
         } else if(kind == TypeKind.VOID) {
-            return "google.protobuf.Empty";
+            serviceReturnType = "void";
+            protoReturnType = "google.protobuf.Empty";
         } else {
             DeclaredType declaredType = (DeclaredType) returnType;
-            String className = declaredType.asElement().getSimpleName().toString();
+            Element element = declaredType.asElement();
+            String className = element.getSimpleName().toString();
+            serviceReturnType = element.getEnclosingElement() + "." + className;
             if(ElementUtil.isCollection(className)) {
                 // get collection generic type
                 List<? extends TypeMirror> genericParamTypes = declaredType.getTypeArguments();
-                className = genericParamTypes.isEmpty() ? "Object" : ((DeclaredType) genericParamTypes.get(0)).asElement().getSimpleName().toString();
+                if(genericParamTypes.isEmpty()) {
+                    className =  "Object";
+                    serviceReturnType = serviceReturnType + "<Object>";
+                } else {
+                    final Element genericElement = ((DeclaredType) genericParamTypes.get(0)).asElement();
+                    className = genericElement.getSimpleName().toString();
+                    serviceReturnType = serviceReturnType + "<" + genericElement.getEnclosingElement() + "." + className + ">";
+                }
                 // change classname to proto type, if possible
                 if (ProtoUtil.protoJavaMap.containsKey(className)) {
                     className = ProtoUtil.protoJavaMap.get(className);
                 }
-                return createWrapperName(className + "Array");
+                protoReturnType = createWrapperName(className + "Array");
             } else {
                 //write proto wrapper of this java primitive wrapper class
                 if (ProtoUtil.protoJavaMap.containsKey(className)) {
                     String protoName = ProtoUtil.protoJavaMap.get(className);
-                    return createWrapperName(protoName);
+                    protoReturnType = createWrapperName(protoName);
                 } else {
-                    return className;
+                    protoReturnType = className;
                 }
             }
         }
+        result.put("serviceReturnType", serviceReturnType);
+        result.put("protoReturnType", protoReturnType);
+        return result;
     }
 }

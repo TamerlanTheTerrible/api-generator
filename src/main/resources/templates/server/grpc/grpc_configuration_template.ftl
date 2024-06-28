@@ -1,3 +1,5 @@
+<#assign serviceClassVarName = serviceClassName?lower_case>
+
 package ${packageName};
 
 import org.springframework.context.annotation.Bean;
@@ -12,10 +14,10 @@ ${imports}
 @Configuration
 public class GrpcServerConfig {
 
-    private final ${serviceClassName} ${serviceClassName?lower_case};
+    private final ${serviceClassName} ${serviceClassVarName};
 
-    public GrpcServerConfig(BillingConfigService billingConfigService) {
-        this.billingConfigService = billingConfigService;
+    public GrpcServerConfig(${serviceClassName} ${serviceClassVarName}) {
+        this.${serviceClassVarName} = ${serviceClassVarName} ;
     }
 
     @Bean
@@ -42,31 +44,44 @@ public class GrpcServerConfig {
     static class ${implementationClassName} extends ${className}.${baseClassName}{
         <#list methods as method>
             <#assign methodName = method.methodName>
-            <#assign returnType = method.returnType>
+            <#assign serviceReturnType = method.returnType.serviceReturnType>
+            <#assign protoReturnType = method.returnType.protoReturnType>
             <#assign protoParamTypeAndName = method.params.protoParamTypeAndName>
             <#assign protoParamName = method.params.protoParamName>
+            <#assign fields = method.params.fields>
 
         @Override
-        public void ${methodName}(<#if protoParamName?has_content>${protoParamTypeAndName}, <#else>com.google.protobuf.Empty request, </#if> StreamObserver<${returnType}> responseObserver) {
-            ${returnType} ${returnType?lower_case} = ${returnType}.newBuilder().build();
-            responseObserver.onNext(${returnType?lower_case});
-            responseObserver.onCompleted();
+        public void ${methodName}(${protoParamTypeAndName}, StreamObserver<${protoReturnType}> responseObserver) {
+            try {
+                ${serviceReturnType} serviceParam = new ${serviceReturnType}();
+                <#list fields as field>
+                    <#assign capCaseField = field?cap_first>
+<#--                    <#assign getterField = protoParamName.getcapCaseField()>-->
+                    serviceParam.set${capCaseField}(${protoParamName}.get${capCaseField}());
+                </#list>
+
+                ${protoReturnType} protoResponse = ${protoReturnType}.newBuilder().build();
+                responseObserver.onNext(protoResponse);
+                responseObserver.onCompleted();
+            } catch (Exception e) {
+
+            }
         }
         </#list>
     }
-    // TODO add to the method
-    try {
-        org.example.billingconfig.dto.BillingConfigCreateDto billingConfigCreateDto =  new org.example.billingconfig.dto.BillingConfigCreateDto();
-        billingConfigCreateDto.setUrl(dto.getUrl());
-        org.example.billingconfig.dto.BillingConfigDto billingConfigDto = billingConfigService.create(billingConfigCreateDto);
 
-        BillingConfigDto billingconfigdto = BillingConfigDto.newBuilder()
-        .setUrl(billingConfigDto.getUrl())
-        .build();
+<#--    try {-->
+<#--        org.example.billingconfig.dto.BillingConfigCreateDto billingConfigCreateDto =  new org.example.billingconfig.dto.BillingConfigCreateDto();-->
+<#--        billingConfigCreateDto.setUrl(dto.getUrl());-->
+<#--        org.example.billingconfig.dto.BillingConfigDto billingConfigDto = billingConfigService.create(billingConfigCreateDto);-->
 
-        responseObserver.onNext(billingconfigdto);
-    } catch (Exception e) {
+<#--        BillingConfigDto billingconfigdto = BillingConfigDto.newBuilder()-->
+<#--        .setUrl(billingConfigDto.getUrl())-->
+<#--        .build();-->
 
-    }
-    responseObserver.onCompleted();
+<#--        responseObserver.onNext(billingconfigdto);-->
+<#--    } catch (Exception e) {-->
+
+<#--    }-->
+<#--    responseObserver.onCompleted();-->
 }
