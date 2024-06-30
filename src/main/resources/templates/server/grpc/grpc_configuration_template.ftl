@@ -41,24 +41,31 @@ public class GrpcServerConfig {
         return server;
     }
 
-    static class ${implementationClassName} extends ${className}.${baseClassName}{
+    class ${implementationClassName} extends ${className}.${baseClassName}{
         <#list methods as method>
             <#assign methodName = method.methodName>
             <#assign serviceReturnType = method.returnType.serviceReturnType>
+            <#assign serviceParamType = method.params.serviceParamType>
             <#assign protoReturnType = method.returnType.protoReturnType>
             <#assign protoParamTypeAndName = method.params.protoParamTypeAndName>
             <#assign protoParamName = method.params.protoParamName>
-            <#assign fields = method.params.fields>
+            <#assign primitives = method.params.fields.primitives>
+            <#assign enums = method.params.fields.enums>
 
         @Override
         public void ${methodName}(${protoParamTypeAndName}, StreamObserver<${protoReturnType}> responseObserver) {
             try {
-                ${serviceReturnType} serviceParam = new ${serviceReturnType}();
-                <#list fields as field>
-                    <#assign capCaseField = field?cap_first>
-<#--                    <#assign getterField = protoParamName.getcapCaseField()>-->
+                ${serviceParamType} serviceParam = new ${serviceParamType}();
+                <#list primitives as primitive>
+                    <#assign capCaseField = primitive?cap_first>
                     serviceParam.set${capCaseField}(${protoParamName}.get${capCaseField}());
                 </#list>
+                <#list enums as enum>
+                    <#assign capCaseField = enum?cap_first>
+                    serviceParam.set${capCaseField}(${capCaseField}.valueOf(${protoParamName}.get${capCaseField}().toString()));
+                </#list>
+
+                ${serviceReturnType} serviceResponse = ${serviceClassVarName}.${methodName}(serviceParam);
 
                 ${protoReturnType} protoResponse = ${protoReturnType}.newBuilder().build();
                 responseObserver.onNext(protoResponse);

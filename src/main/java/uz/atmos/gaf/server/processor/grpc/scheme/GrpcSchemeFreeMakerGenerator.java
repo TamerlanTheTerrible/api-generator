@@ -81,7 +81,6 @@ public class GrpcSchemeFreeMakerGenerator {
             generateMessage(returnType, messages);
             //process params
             List<? extends VariableElement> parameters = ((ExecutableElement) methodElement).getParameters();
-            System.out.println("PARAMS: " + Arrays.toString(parameters.stream().map(ve -> ve.asType().toString()).toArray()));
             String paramString = getParamString(parameters, messages);
             parameters.forEach(ve -> generateMessage(ve.asType(), messages));
             //full method parts the map

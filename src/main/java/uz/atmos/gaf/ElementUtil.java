@@ -24,6 +24,9 @@ public class ElementUtil {
         return Stream.of("List", "ArrayList", "Set", "HashSet", "Collection").anyMatch(fieldType::contains);
     }
 
+    public static boolean isMap(String fieldType) {
+        return fieldType.contains("Map");
+    }
 
     public static String getRequestMethod(Element methodElement) {
         GafMethod gafMethodAnnotation = methodElement.getAnnotation(GafMethod.class);

@@ -3,6 +3,7 @@ package uz.atmos.gaf.server.processor.grpc.config;
 import freemarker.template.Configuration;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
+import org.checkerframework.checker.units.qual.A;
 import uz.atmos.gaf.ElementUtil;
 import uz.atmos.gaf.server.processor.grpc.scheme.ProtoUtil;
 
@@ -20,8 +21,7 @@ import java.io.PrintWriter;
 import java.util.*;
 
 import static uz.atmos.gaf.ElementUtil.*;
-import static uz.atmos.gaf.server.processor.grpc.scheme.ProtoUtil.createWrapperName;
-import static uz.atmos.gaf.server.processor.grpc.scheme.ProtoUtil.getProtoName;
+import static uz.atmos.gaf.server.processor.grpc.scheme.ProtoUtil.*;
 
 /**
  * Created by Temurbek Ismoilov on 10/06/24.
@@ -102,14 +102,8 @@ public class GrpcServerConfigurationGenerator {
             protoParamName = variableElement.getSimpleName().toString();
             protoParamTypeAndName =  getProtoParamTypeName(className) + " " + protoParamName;
             serviceParamType = element.getEnclosingElement() + "." + className;
-            // get fields
-            if(!variableElement.asType().getKind().isPrimitive() && !ProtoUtil.protoJavaMap.containsKey(className)) {
-                final List<String> fields = element.getEnclosedElements().stream()
-                        .filter(e -> ElementKind.FIELD.equals(e.getKind()))
-                        .map(f -> f.getSimpleName().toString())
-                        .toList();
-                result.put("fields", fields);
-            }
+            result.put("fields", putFields(element));
+
         }
 
         result.put("protoParamTypeAndName", protoParamTypeAndName);
@@ -119,22 +113,54 @@ public class GrpcServerConfigurationGenerator {
         return result;
     }
 
-    private static String getProtoParamTypeName(String className) {
+    private String getProtoParamTypeName(String className) {
         String protoTypeName = className;
-        if(ProtoUtil.protoJavaMap.containsKey(className)) {
-            final String protoName = ProtoUtil.protoJavaMap.get(className);
+        if(protoJavaMap.containsKey(className)) {
+            final String protoName = protoJavaMap.get(className);
             protoTypeName = createWrapperName(protoName);
         }
         return protoTypeName;
     }
 
-    private String getProtoTypeName(VariableElement variableElement) {
-        String className = ((DeclaredType) variableElement.asType()).asElement().getSimpleName().toString();
-        if(ProtoUtil.protoJavaMap.containsKey(className)) {
-            final String protoName = ProtoUtil.protoJavaMap.get(className);
-            className = createWrapperName(protoName);
+    private Map<String, List<Object>> putFields(Element element) {
+        Map<String, List<Object>> map = new HashMap<>();
+        map.put("primitives", new ArrayList<>());
+        map.put("enums", new ArrayList<>());
+        map.put("classes", new ArrayList<>());
+        putFields(element, map);
+        return map;
+    }
+
+    private void putFields(Element element, Map<String, List<Object>> map) {
+        final TypeKind kind = element.asType().getKind();
+        String className = element.getSimpleName().toString();
+        if(!kind.isPrimitive() && !protoJavaMap.containsKey(className)) {
+            final List<? extends Element> fields = element.getEnclosedElements().stream()
+                    .filter(e -> ElementKind.FIELD.equals(e.getKind()))
+                    .toList();
+            for(Element field: fields) {
+                final TypeKind fieldKind = field.asType().getKind();
+                if (fieldKind.isPrimitive() || protoJavaMap.containsKey(field.getSimpleName().toString())) {
+                    map.get("primitives").add(field.getSimpleName().toString());
+                } else {
+                    final Element element1 = ((DeclaredType) field.asType()).asElement();
+                    System.out.println("---=== PROCESSING: " + element1.getSimpleName().toString() + " is a type kind - " +  element1.getKind());
+                    if (protoJavaMap.containsKey(field.getSimpleName().toString())) {
+                        map.get("primitives").add(field.getSimpleName().toString());
+                    } else if (element1.getKind() == ElementKind.ENUM) {
+                        String enumName = field.getSimpleName().toString();
+                        packages.add(element1.getEnclosingElement().toString() + "." + element1.getSimpleName().toString());
+                        map.get("enums").add(enumName);
+                        System.out.println(field.getSimpleName().toString() + " is an enum" + ". package: " + field.getEnclosingElement().toString());
+
+                    } else if (field.getKind() == ElementKind.CLASS || field.getKind() == ElementKind.INTERFACE) {
+                        //TODO
+                    } else {
+                        // TODO
+                    }
+                }
+            }
         }
-        return className;
     }
 
     private Map<String, String> generateReturnType(TypeMirror returnType) {
@@ -166,14 +192,14 @@ public class GrpcServerConfigurationGenerator {
                     serviceReturnType = serviceReturnType + "<" + genericElement.getEnclosingElement() + "." + className + ">";
                 }
                 // change classname to proto type, if possible
-                if (ProtoUtil.protoJavaMap.containsKey(className)) {
-                    className = ProtoUtil.protoJavaMap.get(className);
+                if (protoJavaMap.containsKey(className)) {
+                    className = protoJavaMap.get(className);
                 }
                 protoReturnType = createWrapperName(className + "Array");
             } else {
                 //write proto wrapper of this java primitive wrapper class
-                if (ProtoUtil.protoJavaMap.containsKey(className)) {
-                    String protoName = ProtoUtil.protoJavaMap.get(className);
+                if (protoJavaMap.containsKey(className)) {
+                    String protoName = protoJavaMap.get(className);
                     protoReturnType = createWrapperName(protoName);
                 } else {
                     protoReturnType = className;
